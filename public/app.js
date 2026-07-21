@@ -5,6 +5,25 @@
   var UNITS = ['kg', 'g', 'L', 'ml', 'pcs', 'box', 'pack', 'bottle', 'can', 'tray', 'dozen', 'bag', 'carton'];
   var OTHER = '__other__';
 
+  var ICON = {
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg>',
+    chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+    chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0 4 4m-4-4L8 8"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7"/></svg>',
+    upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0 4 4m-4-4L8 8"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 13.3 12.7 21a1.5 1.5 0 0 1-2.1 0l-7-7A1.5 1.5 0 0 1 3.2 13V5.2A2 2 0 0 1 5.2 3.2H13a1.5 1.5 0 0 1 1 .4l6.5 6.5a1.5 1.5 0 0 1 0 2.1Z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 5 5L19.5 7"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.1"/></svg>',
+    select: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8.5 12 2.5 2.5L16 9"/></svg>',
+    clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 12h6M9 16h4"/></svg>',
+    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/></svg>',
+    book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2Z"/><path d="M12 6.5v13"/></svg>',
+  };
+
   var S = {
     tab: 'mix',
     stock: [],
@@ -14,6 +33,7 @@
     search: { mix: '', stock: '', menu: '' },
     mixFilter: 'all',
     editor: null,          // { menuItem, items:[{stockItemId, qty}], status, dirty, stockSearch }
+    select: { active: false, kind: null, ids: {} }, // multi-select bulk-edit mode
     deferredPrompt: null,
     pin: '',
   };
@@ -28,11 +48,34 @@
 
   function toast(msg, isError) {
     var t = $('#toast');
-    t.textContent = msg;
-    t.className = isError ? 'error' : '';
-    t.classList.remove('hidden');
+    t.className = isError ? 'error' : 'ok';
+    t.innerHTML = '<span class="toast-ic">' + (isError ? ICON.alert : ICON.check) + '</span><span>' + esc(msg) + '</span>';
     clearTimeout(toast._t);
-    toast._t = setTimeout(function () { t.classList.add('hidden'); }, 2600);
+    toast._t = setTimeout(function () { t.classList.add('hidden'); }, 2500);
+  }
+
+  /* ---------- centered confirm dialog ---------- */
+
+  function confirmDialog(opts, onYes) {
+    var d = $('#dialog');
+    d.innerHTML =
+      '<div class="dialog-title">' + esc(opts.title) + '</div>' +
+      (opts.body ? '<div class="dialog-body">' + esc(opts.body) + '</div>' : '') +
+      '<div class="dialog-actions">' +
+        '<button class="btn btn-outline" data-dlg="cancel">' + esc(opts.cancel || 'Cancel') + '</button>' +
+        '<button class="btn ' + (opts.danger ? 'btn-danger-solid' : 'btn-primary') + '" data-dlg="ok">' + esc(opts.confirm || 'OK') + '</button>' +
+      '</div>';
+    d.classList.remove('hidden');
+    $('#dialog-backdrop').classList.remove('hidden');
+    function close() {
+      d.classList.add('hidden');
+      $('#dialog-backdrop').classList.add('hidden');
+      d.innerHTML = '';
+      $('#dialog-backdrop').onclick = null;
+    }
+    d.querySelector('[data-dlg="cancel"]').onclick = close;
+    d.querySelector('[data-dlg="ok"]').onclick = function () { close(); onYes(); };
+    $('#dialog-backdrop').onclick = close;
   }
 
   /* ---------- api ---------- */
@@ -58,22 +101,36 @@
 
   /* ---------- login ---------- */
 
+  var PIN_LEN = 4;
+
   function showLogin() {
     $('#app').classList.add('hidden');
     $('#login-screen').classList.remove('hidden');
     S.pin = '';
+    clearPinError();
     renderPinDots();
+  }
+
+  function clearPinError() {
     $('#login-error').textContent = '';
+    $('#pin-dots').classList.remove('err');
   }
 
   function renderPinDots() {
-    var el = $('#pin-dots');
-    var n = Math.max(4, S.pin.length);
     var html = '';
-    for (var i = 0; i < n; i++) {
+    for (var i = 0; i < PIN_LEN; i++) {
       html += '<span class="dot' + (i < S.pin.length ? ' filled' : '') + '"></span>';
     }
-    el.innerHTML = html;
+    $('#pin-dots').innerHTML = html;
+  }
+
+  function pinInput(k) {
+    if (k === 'back') { S.pin = S.pin.slice(0, -1); clearPinError(); renderPinDots(); return; }
+    if (S.pin.length >= PIN_LEN) return;
+    S.pin += k;
+    clearPinError();
+    renderPinDots();
+    if (S.pin.length === PIN_LEN) tryUnlock();
   }
 
   function tryUnlock() {
@@ -86,13 +143,14 @@
         boot();
       })
       .catch(function (err) {
-        S.pin = '';
+        var dots = $('#pin-dots');
+        dots.classList.add('err');
         renderPinDots();
-        var card = document.querySelector('.login-card');
-        card.classList.remove('shake');
-        void card.offsetWidth;
-        card.classList.add('shake');
-        $('#login-error').textContent = err.message === 'Locked' ? 'Wrong PIN' : err.message;
+        dots.classList.remove('shake');
+        void dots.offsetWidth;
+        dots.classList.add('shake');
+        $('#login-error').textContent = err.message === 'Locked' ? 'Wrong PIN — try again' : err.message;
+        setTimeout(function () { S.pin = ''; renderPinDots(); }, 500);
       })
       .then(function () {
         tryUnlock._busy = false;
@@ -103,17 +161,13 @@
   document.querySelector('.keypad').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-key]');
     if (!btn) return;
-    var k = btn.getAttribute('data-key');
-    if (k === 'back') S.pin = S.pin.slice(0, -1);
-    else if (S.pin.length < 8) S.pin += k;
-    $('#login-error').textContent = '';
-    renderPinDots();
+    pinInput(btn.getAttribute('data-key'));
   });
   $('#unlock-btn').addEventListener('click', tryUnlock);
   document.addEventListener('keydown', function (e) {
     if ($('#login-screen').classList.contains('hidden')) return;
-    if (/^[0-9]$/.test(e.key) && S.pin.length < 8) { S.pin += e.key; renderPinDots(); }
-    else if (e.key === 'Backspace') { S.pin = S.pin.slice(0, -1); renderPinDots(); }
+    if (/^[0-9]$/.test(e.key)) pinInput(e.key);
+    else if (e.key === 'Backspace') pinInput('back');
     else if (e.key === 'Enter') tryUnlock();
   });
 
@@ -184,12 +238,13 @@
     });
 
     var chips = [
-      ['all', 'All ' + counts.all],
-      ['not_done', 'Not done ' + counts.not_done],
-      ['draft', 'Drafts ' + counts.draft],
-      ['confirmed', 'Confirmed ' + counts.confirmed],
+      ['all', 'All', counts.all],
+      ['not_done', 'Not done', counts.not_done],
+      ['draft', 'Drafts', counts.draft],
+      ['confirmed', 'Confirmed', counts.confirmed],
     ].map(function (c) {
-      return '<button class="chip' + (S.mixFilter === c[0] ? ' active' : '') + '" data-action="mix-filter" data-val="' + c[0] + '">' + c[1] + '</button>';
+      return '<button class="chip' + (S.mixFilter === c[0] ? ' active' : '') + '" data-action="mix-filter" data-val="' + c[0] + '">' +
+        c[1] + ' <span class="n">' + c[2] + '</span></button>';
     }).join('');
 
     var cards = list.map(function (m) {
@@ -197,21 +252,32 @@
       var mix = mixByMenuId(m._id);
       var sub = [m.category, mix && mix.itemCount ? mix.itemCount + ' ingredient' + (mix.itemCount > 1 ? 's' : '') : null]
         .filter(Boolean).join(' • ') || 'Tap to build the mix';
-      return '<button class="item-card ' + STATUS_CARD[st] + '" data-action="open-mix" data-id="' + m._id + '">' +
+      return '<button class="item-card mix-card ' + STATUS_CARD[st] + '" data-action="open-mix" data-id="' + m._id + '">' +
         '<div class="ic-main"><div class="ic-name">' + esc(m.name) + '</div><div class="ic-sub">' + esc(sub) + '</div></div>' +
         '<span class="badge ' + STATUS_BADGE[st] + '">' + STATUS_LABEL[st] + '</span></button>';
     }).join('');
 
     var empty = S.menu.length === 0
-      ? '<div class="empty"><span class="emoji">🍔</span>No menu items yet.<br>Add them in the <b>Menu</b> tab first.</div>'
-      : (list.length === 0 ? '<div class="empty"><span class="emoji">🔍</span>Nothing matches.</div>' : '');
+      ? emptyState('clipboard', 'No product mixes yet', 'Add menu items in the Menu tab — each one shows up here, ready to fill in.')
+      : (list.length === 0 ? emptyState('search', 'Nothing matches', 'Try a different search or filter.') : '');
 
     $('#view').innerHTML =
-      '<div class="searchbar"><input type="search" id="mix-search" placeholder="Search menu items…" value="' + esc(S.search.mix) + '"></div>' +
+      searchbarHtml('mix-search', 'Search menu items…', S.search.mix) +
       '<div class="chips">' + chips + '</div>' +
       cards + empty;
 
     bindSearch('mix-search', 'mix');
+  }
+
+  function searchbarHtml(id, placeholder, value) {
+    return '<div class="searchbar">' + ICON.search +
+      '<input type="search" id="' + id + '" placeholder="' + placeholder + '" value="' + esc(value) + '"></div>';
+  }
+
+  function emptyState(icon, title, sub) {
+    return '<div class="empty"><div class="empty-ic">' + ICON[icon] + '</div>' +
+      '<div class="empty-title">' + esc(title) + '</div>' +
+      '<div class="empty-sub">' + esc(sub) + '</div></div>';
   }
 
   /* ----- mix editor ----- */
@@ -224,6 +290,7 @@
         menuItem: menuItem,
         items: mix ? mix.items.map(function (i) { return { stockItemId: String(i.stockItemId), qty: String(i.qty) }; }) : [],
         status: mix ? mix.status : 'not_done',
+        notes: mix && mix.notes ? mix.notes : '',
         stockSearch: '',
         dirty: false,
       };
@@ -246,7 +313,7 @@
         '<div class="mr-name">' + esc(s ? s.name : '(deleted item)') + '</div>' +
         '<input type="number" inputmode="decimal" min="0" step="any" placeholder="Qty" value="' + esc(it.qty) + '" data-action="mix-qty" data-idx="' + idx + '">' +
         '<span class="mr-unit">' + esc(s ? s.consumptionUnit : '') + '</span>' +
-        '<button class="mr-del" data-action="mix-remove" data-idx="' + idx + '" aria-label="Remove">×</button>' +
+        '<button class="mr-del" data-action="mix-remove" data-idx="' + idx + '" aria-label="Remove">' + ICON.x + '</button>' +
         '</div>';
     }).join('');
 
@@ -260,29 +327,38 @@
       }).slice(0, 12);
       results = '<div class="stock-results">' + (found.length
         ? found.map(function (s) {
-            return '<button data-action="mix-add" data-id="' + s._id + '">' + esc(s.name) +
-              ' <span class="sr-sub">' + esc([s.category, s.consumptionUnit].filter(Boolean).join(' • ')) + '</span></button>';
+            return '<button data-action="mix-add" data-id="' + s._id + '">' +
+              '<span class="sr-plus">' + ICON.plus + '</span>' +
+              '<span class="sr-main"><span class="sr-name">' + esc(s.name) + '</span>' +
+              '<div class="sr-sub">' + esc([s.category, s.consumptionUnit ? 'used in ' + s.consumptionUnit : ''].filter(Boolean).join(' · ')) + '</div></span></button>';
           }).join('')
-        : '<button disabled style="color:#9ca3af">No stock items found</button>') + '</div>';
+        : '<div class="sr-empty">No stock items found</div>') + '</div>';
     }
 
     var shareBtn = st !== 'not_done' && !ed.dirty
-      ? '<button class="icon-btn" data-action="share-card" title="Share as image">🖼️</button>' : '';
+      ? '<button class="share-btn" data-action="share-card" title="Share as image" aria-label="Share">' + ICON.share + '</button>' : '';
+
+    var emptyMix = '<div class="mix-empty"><div class="empty-ic">' + ICON.search + '</div>' +
+      '<div class="empty-title">No ingredients yet</div>' +
+      '<div class="empty-sub">Search below to add the first stock item to this mix.</div></div>';
 
     $('#view').innerHTML =
       '<div class="editor-head">' +
-        '<button class="back-btn" data-action="mix-back" aria-label="Back">←</button>' +
+        '<button class="back-btn" data-action="mix-back" aria-label="Back">' + ICON.chevronLeft + '</button>' +
         '<div class="editor-title"><h2>' + esc(ed.menuItem.name) + '</h2>' +
         '<div class="ic-sub">' + esc(ed.menuItem.category || 'Product mix') + '</div></div>' +
         '<span class="badge ' + STATUS_BADGE[st] + '">' + STATUS_LABEL[st] + '</span>' + shareBtn +
       '</div>' +
-      '<div class="mix-rows">' + (rows || '<div class="empty" style="padding:26px 10px"><span class="emoji">🧺</span>No stock items in this mix yet.<br>Search below to add.</div>') + '</div>' +
-      '<input type="search" id="stock-search" placeholder="Search stock items…" value="' + esc(ed.stockSearch) + '">' +
+      (rows ? '<div class="mix-rows">' + rows + '</div>' : emptyMix) +
+      '<div class="section-label">Add ingredient</div>' +
+      searchbarHtml('stock-search', 'Search stock items…', ed.stockSearch) +
       results +
-      '<div style="height:70px"></div>' +
+      '<label class="mix-note-label">Note (optional)</label>' +
+      '<textarea id="mix-notes" data-action="mix-notes" maxlength="1000" placeholder="e.g. prep steps, cooking tips, allergen info…">' + esc(ed.notes || '') + '</textarea>' +
+      '<div style="height:72px"></div>' +
       '<div class="editor-actions">' +
         '<button class="btn btn-yellow" data-action="mix-save" data-status="draft">Save Draft</button>' +
-        '<button class="btn btn-green" data-action="mix-save" data-status="confirmed">Confirm</button>' +
+        '<button class="btn btn-green" data-action="mix-save" data-status="confirmed"' + (ed.items.length ? '' : ' disabled') + '>Confirm</button>' +
       '</div>';
 
     var si = $('#stock-search');
@@ -309,7 +385,7 @@
     }
     if (items.length === 0 && ed.status === 'not_done') return toast('Add at least one stock item', true);
 
-    api('/product-mixes/' + ed.menuItem._id, { method: 'PUT', body: { items: items, status: status } })
+    api('/product-mixes/' + ed.menuItem._id, { method: 'PUT', body: { items: items, status: status, notes: ed.notes || '' } })
       .then(function (r) {
         return api('/product-mixes').then(function (mixes) {
           S.mixes = mixes;
@@ -317,7 +393,7 @@
             toast('Mix cleared');
             S.editor = null;
           } else {
-            toast(status === 'confirmed' ? 'Confirmed ✓' : 'Saved as draft');
+            toast(status === 'confirmed' ? 'Confirmed' : 'Saved as draft');
             S.editor.status = status;
             S.editor.dirty = false;
           }
@@ -329,36 +405,78 @@
 
   /* ----- stock / menu lists ----- */
 
-  function renderItemList(kind) {
+  function filterItems(kind) {
     var items = kind === 'stock' ? S.stock : S.menu;
     var q = S.search[kind].toLowerCase();
-    var list = items.filter(function (i) {
+    return items.filter(function (i) {
       return !q || i.name.toLowerCase().indexOf(q) !== -1 || (i.category || '').toLowerCase().indexOf(q) !== -1;
     });
+  }
+
+  function renderItemList(kind) {
+    var items = kind === 'stock' ? S.stock : S.menu;
+    var list = filterItems(kind);
+    var selecting = S.select.active && S.select.kind === kind;
 
     var cards = list.map(function (i) {
       var bits = [i.category];
       if (kind === 'stock') bits.push('Buy: ' + (i.purchaseUnit || '—'), 'Use: ' + (i.consumptionUnit || '—'));
       else bits.push(i.consumptionUnit ? 'Unit: ' + i.consumptionUnit : null);
+      var sub = esc(bits.filter(Boolean).join(' • '));
+      if (selecting) {
+        var on = !!S.select.ids[i._id];
+        return '<button class="item-card select-card' + (on ? ' selected' : '') + '" data-action="toggle-select" data-id="' + i._id + '">' +
+          '<span class="check' + (on ? ' on' : '') + '"></span>' +
+          '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div></button>';
+      }
       return '<button class="item-card" data-action="edit-item" data-kind="' + kind + '" data-id="' + i._id + '">' +
-        '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div>' +
-        '<div class="ic-sub">' + esc(bits.filter(Boolean).join(' • ')) + '</div></div>' +
-        '<span style="color:#d1d5db;font-size:18px">›</span></button>';
+        '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div>' +
+        '<span class="ic-chev">' + ICON.chevronRight + '</span></button>';
     }).join('');
 
     var label = kind === 'stock' ? 'stock' : 'menu';
     var empty = items.length === 0
-      ? '<div class="empty"><span class="emoji">' + (kind === 'stock' ? '📦' : '🍔') + '</span>No ' + label + ' items yet.<br>Tap <b>+</b> to add one, or use Bulk Upload.</div>'
-      : (list.length === 0 ? '<div class="empty"><span class="emoji">🔍</span>Nothing matches.</div>' : '');
+      ? emptyState(kind === 'stock' ? 'box' : 'book', 'No ' + label + ' items yet', 'Tap + to add one, or use Bulk Upload to import many.')
+      : (list.length === 0 ? emptyState('search', 'Nothing matches', 'Try a different search.') : '');
+
+    var searchbar = searchbarHtml(kind + '-search', 'Search ' + label + ' items…', S.search[kind]);
+
+    if (selecting) {
+      var n = Object.keys(S.select.ids).length;
+      var allOn = list.length > 0 && list.every(function (i) { return S.select.ids[i._id]; });
+      var fieldBtns = kind === 'stock'
+        ? '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="category">' + ICON.tag + ' Category</button>' +
+          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="purchaseUnit">Buy unit</button>' +
+          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="consumptionUnit">Use unit</button>'
+        : '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="category">' + ICON.tag + ' Category</button>' +
+          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="consumptionUnit">Unit</button>';
+
+      $('#view').innerHTML =
+        searchbar +
+        '<div class="select-toolbar">' +
+          '<button class="link-btn" data-action="select-cancel">Cancel</button>' +
+          '<span id="select-count">' + n + ' selected</span>' +
+          '<button class="link-btn" data-action="select-all" data-kind="' + kind + '">' + (allOn ? 'Clear all' : 'Select all') + '</button>' +
+        '</div>' +
+        cards + empty +
+        '<div style="height:80px"></div>' +
+        '<div class="select-actions">' + fieldBtns +
+          '<button class="btn btn-danger btn-sm" data-action="bulk-del" data-kind="' + kind + '">' + ICON.trash + ' Delete</button>' +
+        '</div>';
+      bindSearch(kind + '-search', kind);
+      return;
+    }
 
     $('#view').innerHTML =
-      '<div class="searchbar"><input type="search" id="' + kind + '-search" placeholder="Search ' + label + ' items…" value="' + esc(S.search[kind]) + '"></div>' +
+      searchbar +
       '<div class="list-actions">' +
-        '<button class="btn btn-outline btn-sm" data-action="bulk-open" data-kind="' + kind + '">↑ Bulk Upload</button>' +
-        '<button class="btn btn-outline btn-sm" data-action="cats-open" data-kind="' + kind + '">🏷 Categories</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-open" data-kind="' + kind + '">' + ICON.upload + ' Bulk Upload</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-export" data-kind="' + kind + '">' + ICON.download + ' Export</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="cats-open" data-kind="' + kind + '">' + ICON.tag + ' Categories</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="select-start" data-kind="' + kind + '">' + ICON.select + ' Select</button>' +
       '</div>' +
       cards + empty +
-      '<button class="fab" data-action="add-item" data-kind="' + kind + '" aria-label="Add">+</button>';
+      '<button class="fab" data-action="add-item" data-kind="' + kind + '" aria-label="Add">' + ICON.plus + '</button>';
 
     bindSearch(kind + '-search', kind);
   }
@@ -408,8 +526,7 @@
       return '<option value="' + esc(c.name) + '"' + (c.name === value ? ' selected' : '') + '>' + esc(c.name) + '</option>';
     }).join('');
     if (value && !known) opts += '<option value="' + esc(value) + '" selected>' + esc(value) + '</option>';
-    return '<select id="f-category">' + opts + '</select>' +
-      '<div class="ic-sub" style="margin-top:6px">Manage categories from the list screen (🏷 button).</div>';
+    return '<select id="f-category">' + opts + '</select>';
   }
 
   function readUnit(name) {
@@ -425,7 +542,7 @@
 
     openSheet(
       '<div class="sheet-title">' + title + '</div>' +
-      '<label>Name *</label><input type="text" id="f-name" value="' + esc(item.name || '') + '" maxlength="120" placeholder="e.g. ' + (kind === 'stock' ? 'Chicken Fillet' : 'Boss Burger') + '">' +
+      '<label>Name</label><input type="text" id="f-name" value="' + esc(item.name || '') + '" maxlength="120" placeholder="e.g. ' + (kind === 'stock' ? 'Chicken Thigh' : 'Boss Burger') + '">' +
       '<label>Category</label>' + catSelect(kind, item.category || '') +
       (kind === 'stock' ? '<label>Purchase Unit</label>' + unitSelect('purchaseUnit', item.purchaseUnit || '') : '') +
       '<label>Consumption Unit</label>' + unitSelect('consumptionUnit', item.consumptionUnit || '') +
@@ -459,38 +576,54 @@
     var req = id ? api(base + '/' + id, { method: 'PUT', body: body }) : api(base, { method: 'POST', body: body });
     req.then(function () {
       closeSheet();
-      return loadAll().then(function () { render(); toast('Saved ✓'); });
+      return loadAll().then(function () { render(); toast('Saved'); });
     }).catch(function (err) { toast(err.message, true); });
   }
 
   function deleteItem(kind, id) {
     var name = kind === 'stock' ? 'stock item' : 'menu item';
-    var warn = kind === 'menu' ? ' Its product mix will also be deleted.' : '';
-    if (!confirm('Delete this ' + name + '?' + warn)) return;
-    api((kind === 'stock' ? '/stock-items/' : '/menu-items/') + id, { method: 'DELETE' })
-      .then(function () {
-        closeSheet();
-        return loadAll().then(function () { render(); toast('Deleted'); });
-      })
-      .catch(function (err) { toast(err.message, true); });
+    confirmDialog({
+      title: 'Delete this ' + name + '?',
+      body: kind === 'menu' ? 'Its product mix will be removed too. This can’t be undone.' : 'This can’t be undone.',
+      danger: true, confirm: 'Delete',
+    }, function () {
+      api((kind === 'stock' ? '/stock-items/' : '/menu-items/') + id, { method: 'DELETE' })
+        .then(function () {
+          closeSheet();
+          return loadAll().then(function () { render(); toast('Deleted'); });
+        })
+        .catch(function (err) { toast(err.message, true); });
+    });
   }
 
   /* ---------- categories ---------- */
+
+  function categoryCount(kind, name) {
+    var items = kind === 'stock' ? S.stock : S.menu;
+    var key = name.toLowerCase();
+    var n = 0;
+    for (var i = 0; i < items.length; i++) {
+      if ((items[i].category || '').toLowerCase() === key) n++;
+    }
+    return n;
+  }
 
   function openCatSheet(kind) {
     var cats = S.cats[kind];
     var rows = cats.length
       ? cats.map(function (c) {
-          return '<div class="cat-row"><span>' + esc(c.name) + '</span>' +
-            '<button class="btn btn-danger btn-sm" data-action="cat-del" data-kind="' + kind + '" data-id="' + c._id + '">Delete</button></div>';
+          var n = categoryCount(kind, c.name);
+          return '<div class="cat-row">' +
+            '<span class="cat-name">' + esc(c.name) + '<span class="cat-count"> · ' + n + ' item' + (n === 1 ? '' : 's') + '</span></span>' +
+            '<button class="cat-del" data-action="cat-del" data-kind="' + kind + '" data-id="' + c._id + '" aria-label="Delete">' + ICON.trash + '</button></div>';
         }).join('')
-      : '<div class="empty" style="padding:20px"><span class="emoji">🏷</span>No categories yet.</div>';
+      : emptyState('tag', 'No categories yet', 'Add one below, then pick it from the dropdown when you create items.');
 
     openSheet(
       '<div class="sheet-title">' + (kind === 'stock' ? 'Stock' : 'Menu') + ' Categories</div>' +
       rows +
-      '<div class="cat-add"><input type="text" id="cat-new" placeholder="New category name" maxlength="60">' +
-      '<button class="btn btn-primary btn-sm" data-action="cat-add" data-kind="' + kind + '" style="flex:0 0 auto">Add</button></div>'
+      '<div class="cat-add"><input type="text" id="cat-new" placeholder="New category…" maxlength="60">' +
+      '<button class="btn btn-primary btn-sm" data-action="cat-add" data-kind="' + kind + '">Add</button></div>'
     );
   }
 
@@ -510,6 +643,94 @@
       .catch(function (err) { toast(err.message, true); });
   }
 
+  /* ---------- multi-select bulk edit ---------- */
+
+  function exitSelect() { S.select = { active: false, kind: null, ids: {} }; }
+
+  function selectedIds() { return Object.keys(S.select.ids); }
+
+  function openBulkFieldSheet(kind, field) {
+    var ids = selectedIds();
+    if (!ids.length) return toast('Select some items first', true);
+    var label = field === 'category' ? 'Category' : (field === 'purchaseUnit' ? 'Purchase Unit' : 'Consumption Unit');
+    var control = field === 'category' ? catSelect(kind, '') : unitSelect(field, '');
+    openSheet(
+      '<div class="sheet-title">Set ' + label + '</div>' +
+      '<p class="preview-note">Applies to <b>' + ids.length + '</b> selected item' + (ids.length > 1 ? 's' : '') + '.</p>' +
+      '<label>' + label + '</label>' + control +
+      '<div class="sheet-actions"><button class="btn btn-primary" data-action="bulk-field-apply" data-kind="' + kind + '" data-field="' + field + '">Apply to ' + ids.length + '</button></div>'
+    );
+    document.querySelectorAll('#sheet select[data-role="unit-select"]').forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        var other = document.getElementById(sel.id + '-other');
+        other.classList.toggle('hidden', sel.value !== OTHER);
+        if (sel.value === OTHER) other.focus();
+      });
+    });
+  }
+
+  function applyBulkField(kind, field) {
+    var value = field === 'category' ? $('#f-category').value : readUnit(field);
+    if (!value) return toast('Pick a value first', true);
+    var ids = selectedIds();
+    if (!ids.length) return toast('Select some items first', true);
+    var base = kind === 'stock' ? '/stock-items' : '/menu-items';
+    api(base + '/bulk-update', { method: 'POST', body: { ids: ids, field: field, value: value } })
+      .then(function (r) {
+        closeSheet();
+        exitSelect();
+        return loadAll().then(function () {
+          render();
+          toast('Updated ' + r.updated + ' item' + (r.updated === 1 ? '' : 's'));
+        });
+      })
+      .catch(function (err) { toast(err.message, true); });
+  }
+
+  function bulkDelete(kind) {
+    var ids = selectedIds();
+    if (!ids.length) return toast('Select some items first', true);
+    var noun = ids.length + ' item' + (ids.length > 1 ? 's' : '');
+    confirmDialog({
+      title: 'Delete ' + noun + '?',
+      body: kind === 'menu'
+        ? 'Their product mixes will be removed too. This can’t be undone.'
+        : 'This can’t be undone. Any item used in a product mix is kept.',
+      danger: true, confirm: 'Delete',
+    }, function () {
+      var base = kind === 'stock' ? '/stock-items' : '/menu-items';
+      api(base + '/bulk-delete', { method: 'POST', body: { ids: ids } })
+        .then(function (r) {
+          exitSelect();
+          return loadAll().then(function () {
+            render();
+            toast('Deleted ' + r.deleted + (r.skipped ? ', ' + r.skipped + ' skipped (in use)' : ''));
+          });
+        })
+        .catch(function (err) { toast(err.message, true); });
+    });
+  }
+
+  function exportItems(kind) {
+    var items = kind === 'stock' ? S.stock : S.menu;
+    if (!items.length) return toast('Nothing to export yet', true);
+    var headers = kind === 'stock'
+      ? ['id', 'Name', 'Category', 'Purchase Unit', 'Consumption Unit', 'Notes']
+      : ['id', 'Name', 'Category', 'Consumption Unit', 'Notes'];
+    var aoa = [headers];
+    items.forEach(function (i) {
+      aoa.push(kind === 'stock'
+        ? [i._id, i.name, i.category || '', i.purchaseUnit || '', i.consumptionUnit || '', i.notes || '']
+        : [i._id, i.name, i.category || '', i.consumptionUnit || '', i.notes || '']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = headers.map(function (h) { return { wch: h === 'id' ? 26 : 18 }; });
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, kind === 'stock' ? 'Stock Items' : 'Menu Items');
+    XLSX.writeFile(wb, 'munventory-' + kind + '-items.xlsx');
+    toast('Exported ' + items.length + ' item' + (items.length === 1 ? '' : 's'));
+  }
+
   /* ---------- bulk upload ---------- */
 
   var bulkState = null; // { kind, rows }
@@ -521,9 +742,10 @@
       : 'Name, Category, Consumption Unit, Notes';
     openSheet(
       '<div class="sheet-title">Bulk Upload — ' + (kind === 'stock' ? 'Stock' : 'Menu') + ' Items</div>' +
-      '<p class="preview-note">Upload a CSV or Excel file with these columns:<br><b>' + cols + '</b><br>Existing items with the same name will be updated.</p>' +
-      '<button class="btn btn-outline btn-block btn-sm" data-action="bulk-template" data-kind="' + kind + '">↓ Download Template</button>' +
-      '<label class="file-drop" for="bulk-file">📄 Tap to choose a CSV / Excel file' +
+      '<div class="info-box">Expected columns: <b>' + cols + '</b><br>Items with the same name are updated; new names are added.</div>' +
+      '<div class="info-box tip">💡 <b>To bulk-update:</b> tap <b>Export</b> on the list, edit the file, then upload it here. Keep the <b>id</b> column — rows with an id update that exact item, so you can even rename them.</div>' +
+      '<button class="btn btn-soft btn-block btn-sm" data-action="bulk-template" data-kind="' + kind + '" style="margin-top:12px">' + ICON.download + ' Download Template</button>' +
+      '<label class="file-drop" for="bulk-file">' + ICON.upload + 'Tap to choose a file<span class="fd-hint">.xlsx or .csv</span>' +
       '<input type="file" id="bulk-file" accept=".csv,.xlsx,.xls" class="hidden"></label>' +
       '<div id="bulk-preview"></div>' +
       '<div class="sheet-actions"><button class="btn btn-primary" id="bulk-import" data-action="bulk-import" disabled>Import</button></div>'
@@ -534,6 +756,7 @@
   function normKey(k) { return String(k).toLowerCase().replace(/[^a-z]/g, ''); }
 
   var COL_MAP = {
+    id: 'id', itemid: 'id',
     name: 'name', itemname: 'name', stockitemname: 'name', menuitemname: 'name', stockitem: 'name', menuitem: 'name',
     category: 'category', cat: 'category',
     purchaseunit: 'purchaseUnit', purchase: 'purchaseUnit',
@@ -558,39 +781,48 @@
           if (mapped && !out[mapped]) out[mapped] = String(r[k]).trim();
         });
         return out;
-      }).filter(function (r) { return r.name; });
+      }).filter(function (r) { return r.name || r.id; });
 
       if (!rows.length) {
-        $('#bulk-preview').innerHTML = '<p class="preview-note" style="color:var(--red)">No usable rows found. Make sure the first row has column headers (e.g. "Name").</p>';
-        $('#bulk-import').disabled = true;
+        errPreview('No usable rows found', 'Check that the headers match the template, then try again.');
         return;
       }
       if (rows.length > BULK_MAX_ROWS) {
-        $('#bulk-preview').innerHTML = '<p class="preview-note" style="color:var(--red)">This file has ' + rows.length + ' rows — the maximum is ' + BULK_MAX_ROWS + ' per upload. Please split the file.</p>';
-        $('#bulk-import').disabled = true;
+        errPreview('Too many rows (' + rows.length + ')', 'The maximum is ' + BULK_MAX_ROWS + ' per upload. Please split the file.');
         return;
       }
       bulkState.rows = rows;
-      var headers = bulkState.kind === 'stock'
-        ? ['name', 'category', 'purchaseUnit', 'consumptionUnit']
-        : ['name', 'category', 'consumptionUnit'];
+      var cols = bulkState.kind === 'stock'
+        ? [['name', 'Name'], ['category', 'Category'], ['purchaseUnit', 'Buy'], ['consumptionUnit', 'Use']]
+        : [['name', 'Name'], ['category', 'Category'], ['consumptionUnit', 'Unit']];
       var prev = rows.slice(0, 5).map(function (r) {
-        return '<tr>' + headers.map(function (h) { return '<td>' + esc(r[h] || '') + '</td>'; }).join('') + '</tr>';
+        return '<tr>' + cols.map(function (h) { return '<td>' + esc(r[h[0]] || '') + '</td>'; }).join('') + '</tr>';
       }).join('');
+      var more = rows.length > 5 ? '<div class="preview-more">+ ' + (rows.length - 5) + ' more row' + (rows.length - 5 > 1 ? 's' : '') + '</div>' : '';
       $('#bulk-preview').innerHTML =
-        '<p class="preview-note"><b>' + rows.length + '</b> row' + (rows.length > 1 ? 's' : '') + ' ready to import' + (rows.length > 5 ? ' (showing first 5)' : '') + ':</p>' +
-        '<div class="table-scroll"><table class="preview-table"><tr>' +
-        headers.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' + prev + '</table></div>';
-      $('#bulk-import').disabled = false;
+        '<div class="ready-row"><span class="ready-ic">' + ICON.check + '</span>' +
+        '<span class="ready-txt">' + rows.length + ' row' + (rows.length > 1 ? 's' : '') + ' ready</span>' +
+        '<span class="ready-file">' + esc(file.name) + '</span></div>' +
+        '<div class="table-scroll"><table class="preview-table"><thead><tr>' +
+        cols.map(function (h) { return '<th>' + h[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + prev + '</tbody></table>' + more + '</div>';
+      var b = $('#bulk-import');
+      b.textContent = 'Import ' + rows.length + ' item' + (rows.length > 1 ? 's' : '');
+      b.disabled = false;
     }).catch(function () {
       toast('Could not read that file', true);
     });
   }
 
+  function errPreview(title, sub) {
+    $('#bulk-preview').innerHTML = '<div class="err-box">' + ICON.alert +
+      '<div><div class="err-title">' + esc(title) + '</div><div class="err-sub">' + esc(sub) + '</div></div></div>';
+    $('#bulk-import').disabled = true;
+  }
+
   function bulkImport() {
     if (!bulkState || !bulkState.rows) return;
     $('#bulk-import').disabled = true;
-    $('#bulk-import').textContent = 'Importing…';
+    $('#bulk-import').innerHTML = '<span class="spin"></span> Importing…';
     var base = bulkState.kind === 'stock' ? '/stock-items' : '/menu-items';
     api(base + '/bulk', { method: 'POST', body: { items: bulkState.rows } })
       .then(function (r) {
@@ -626,30 +858,31 @@
   function openReportSheet() {
     var canShare = !!(navigator.canShare && navigator.share);
     openSheet(
-      '<div class="sheet-title">Product Mix Report</div>' +
-      '<p class="preview-note">Excel report of every menu item with its stock items, quantities and status.</p>' +
+      '<div class="sheet-title">Report</div>' +
+      '<p class="preview-note">One Excel file with every product mix, its status and full ingredient quantities.</p>' +
       '<div class="sheet-actions" style="flex-direction:column">' +
-      '<button class="btn btn-primary btn-block" data-action="report-download">↓ Download Excel</button>' +
-      (canShare ? '<button class="btn btn-outline btn-block" data-action="report-share">📤 Share Excel</button>' : '') +
+      '<button class="btn btn-primary btn-block" data-action="report-download">' + ICON.download + ' Download Excel</button>' +
+      (canShare ? '<button class="btn btn-soft btn-block" data-action="report-share">' + ICON.share + ' Share Excel</button>' : '') +
       '</div>'
     );
   }
 
   function buildReportWb() {
     return api('/report').then(function (rows) {
-      var aoa = [['Menu Item', 'Category', 'Status', 'Stock Item', 'Qty', 'Unit']];
+      var aoa = [['Menu Item', 'Category', 'Status', 'Stock Item', 'Qty', 'Unit', 'Note']];
       rows.forEach(function (m) {
         var label = STATUS_LABEL[m.status] || m.status;
+        var note = m.notes || '';
         if (!m.items.length) {
-          aoa.push([m.name, m.category, label, '—', '', '']);
+          aoa.push([m.name, m.category, label, '—', '', '', note]);
         } else {
           m.items.forEach(function (it, i) {
-            aoa.push([i === 0 ? m.name : '', i === 0 ? m.category : '', i === 0 ? label : '', it.stockName, it.qty, it.unit]);
+            aoa.push([i === 0 ? m.name : '', i === 0 ? m.category : '', i === 0 ? label : '', it.stockName, it.qty, it.unit, i === 0 ? note : '']);
           });
         }
       });
       var ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 12 }, { wch: 26 }, { wch: 8 }, { wch: 8 }];
+      ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 12 }, { wch: 26 }, { wch: 8 }, { wch: 8 }, { wch: 34 }];
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Product Mix');
       return wb;
@@ -684,24 +917,30 @@
 
   /* ---------- recipe card image ---------- */
 
+  var RC_STATUS_CLASS = { draft: 'draft', confirmed: '', not_done: 'notdone' };
+
   function buildRecipeCard() {
     var ed = S.editor;
     var rows = ed.items.map(function (it) {
       var s = stockById(it.stockItemId);
-      return '<div class="rc-row"><span>' + esc(s ? s.name : '(deleted)') + '</span>' +
-        '<span class="rc-qty">' + esc(it.qty) + ' ' + esc(s ? s.consumptionUnit : '') + '</span></div>';
+      return '<div class="rc-row"><span class="rc-name">' + esc(s ? s.name : '(deleted)') + '</span>' +
+        '<span class="rc-lead"></span>' +
+        '<span class="rc-qty">' + esc(it.qty) + '<span class="u">' + esc(s ? s.consumptionUnit : '') + '</span></span></div>';
     }).join('');
     var d = new Date();
+    var dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+    var pills = (ed.menuItem.category ? '<span class="rc-pill">' + esc(ed.menuItem.category) + '</span>' : '') +
+      '<span class="rc-pill status ' + RC_STATUS_CLASS[ed.status] + '"><span class="dot"></span>' + STATUS_LABEL[ed.status] + '</span>';
     $('#card-stage').innerHTML =
       '<div class="recipe-card" id="recipe-card">' +
-        '<div class="rc-head"><div class="rc-text">' +
-        '<div class="rc-app">Munchies Inventory · Product Mix</div>' +
-        '<h2>' + esc(ed.menuItem.name) + '</h2>' +
-        (ed.menuItem.category ? '<div class="rc-meta">' + esc(ed.menuItem.category) + '</div>' : '') +
-        '<span class="rc-status">' + STATUS_LABEL[ed.status] + '</span></div>' +
-        '<img class="rc-icon" src="/icons/icon-192.png" alt=""></div>' +
+        '<div class="rc-head">' +
+          '<div class="rc-brand"><img src="/icons/icon-192.png" alt=""><span>Mun-ventory</span></div>' +
+          '<h2>' + esc(ed.menuItem.name) + '</h2>' +
+          '<div class="rc-pills">' + pills + '</div>' +
+        '</div>' +
         '<div class="rc-body">' + rows + '</div>' +
-        '<div class="rc-foot">' + d.toLocaleDateString() + '</div>' +
+        (ed.notes ? '<div class="rc-note"><span class="rc-note-label">Note</span>' + esc(ed.notes) + '</div>' : '') +
+        '<div class="rc-foot"><span>' + dateStr + '</span><span class="rc-mark">mun-ventory</span></div>' +
       '</div>';
     return document.getElementById('recipe-card');
   }
@@ -753,8 +992,11 @@
       case 'mix-filter': S.mixFilter = el.getAttribute('data-val'); render(); break;
       case 'open-mix': openMix(id); break;
       case 'mix-back':
-        if (S.editor && S.editor.dirty && !confirm('Discard unsaved changes?')) return;
-        S.editor = null; render(); break;
+        if (S.editor && S.editor.dirty) {
+          confirmDialog({ title: 'Discard changes?', body: 'Your unsaved edits to this mix will be lost.', confirm: 'Discard' },
+            function () { S.editor = null; render(); });
+        } else { S.editor = null; render(); }
+        break;
       case 'mix-add':
         S.editor.items.push({ stockItemId: id, qty: '' });
         S.editor.stockSearch = '';
@@ -778,6 +1020,39 @@
       case 'cats-open': openCatSheet(kind); break;
       case 'cat-add': addCategory(kind); break;
       case 'cat-del': deleteCategory(kind, id); break;
+      case 'select-start':
+        if ((kind === 'stock' ? S.stock : S.menu).length === 0) { toast('Add some items first', true); break; }
+        S.select = { active: true, kind: kind, ids: {} };
+        render(); window.scrollTo(0, 0); break;
+      case 'select-cancel': exitSelect(); render(); break;
+      case 'toggle-select': {
+        var nowOn = !S.select.ids[id];
+        if (nowOn) S.select.ids[id] = true; else delete S.select.ids[id];
+        el.classList.toggle('selected', nowOn);
+        var chk = el.querySelector('.check');
+        if (chk) chk.classList.toggle('on', nowOn);
+        var cnt = document.getElementById('select-count');
+        if (cnt) cnt.textContent = selectedIds().length + ' selected';
+        // keep the Select all / Clear all label in sync with live selection
+        var allBtn = document.querySelector('[data-action="select-all"]');
+        if (allBtn) {
+          var vis0 = filterItems(S.select.kind);
+          var allOn0 = vis0.length > 0 && vis0.every(function (i) { return S.select.ids[i._id]; });
+          allBtn.textContent = allOn0 ? 'Clear all' : 'Select all';
+        }
+        break;
+      }
+      case 'select-all': {
+        var vis = filterItems(kind);
+        var everyOn = vis.length > 0 && vis.every(function (i) { return S.select.ids[i._id]; });
+        S.select.ids = {};
+        if (!everyOn) vis.forEach(function (i) { S.select.ids[i._id] = true; });
+        render(); break;
+      }
+      case 'bulk-field': openBulkFieldSheet(kind, el.getAttribute('data-field')); break;
+      case 'bulk-field-apply': applyBulkField(kind, el.getAttribute('data-field')); break;
+      case 'bulk-del': bulkDelete(kind); break;
+      case 'bulk-export': exportItems(kind); break;
       case 'bulk-open': openBulkSheet(kind); break;
       case 'bulk-template': downloadTemplate(kind); break;
       case 'bulk-import': bulkImport(); break;
@@ -795,17 +1070,23 @@
         var sb = document.querySelector('[data-action="share-card"]');
         if (sb) sb.remove(); // unsaved changes: hide share until saved again
       }
+    } else if (e.target.matches('[data-action="mix-notes"]')) {
+      if (S.editor) {
+        S.editor.notes = e.target.value;
+        S.editor.dirty = true;
+        var sb2 = document.querySelector('[data-action="share-card"]');
+        if (sb2) sb2.remove();
+      }
     }
   });
 
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () {
       var tab = t.getAttribute('data-tab');
-      if (S.editor && S.editor.dirty && !confirm('Discard unsaved changes?')) return;
-      S.editor = null;
-      S.tab = tab;
-      render();
-      window.scrollTo(0, 0);
+      function go() { S.editor = null; exitSelect(); S.tab = tab; render(); window.scrollTo(0, 0); }
+      if (S.editor && S.editor.dirty) {
+        confirmDialog({ title: 'Discard changes?', body: 'Your unsaved edits to this mix will be lost.', confirm: 'Discard' }, go);
+      } else { go(); }
     });
   });
 

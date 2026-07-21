@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mun-ventory</title>
   <meta name="description" content="Stock, menu & product mix manager">
-  <meta name="theme-color" content="#ef1980">
+  <meta name="theme-color" content="#ec4899">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -19,17 +19,23 @@
 
   <!-- PIN lock screen -->
   <div id="login-screen" class="hidden">
-    <div class="login-card">
-      <img class="login-banner" src="/icons/full-logo.png" alt="Munchies Inventory">
-      <p class="login-sub">Enter PIN to unlock</p>
+    <div class="login-top">
+      <img class="login-logo" src="/icons/icon-192.png" alt="Mun-ventory">
+      <h1 class="login-name">Mun-ventory</h1>
+      <p class="login-sub">Enter your 4-digit PIN</p>
       <div id="pin-dots" class="pin-dots"></div>
       <p id="login-error" class="login-error"></p>
+    </div>
+    <div class="login-bottom">
       <div class="keypad">
         <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
         <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
         <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
-        <button class="keypad-blank" disabled></button><button data-key="0">0</button>
-        <button data-key="back" aria-label="Delete">⌫</button>
+        <button class="keypad-blank" disabled></button>
+        <button data-key="0">0</button>
+        <button class="keypad-back" data-key="back" aria-label="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6H10.5a2 2 0 0 0-1.5.7l-4.2 4.6a1 1 0 0 0 0 1.4L9 17.3a2 2 0 0 0 1.5.7H20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z"/><path d="m17 9-5 5M12 9l5 5"/></svg>
+        </button>
       </div>
       <button id="unlock-btn" class="btn btn-primary btn-block">Unlock</button>
     </div>
@@ -40,9 +46,15 @@
     <header id="topbar">
       <div class="brand"><img class="brand-logo" src="/icons/icon-192.png" alt=""> Mun-ventory</div>
       <div class="topbar-actions">
-        <button id="install-btn" class="icon-btn hidden" title="Install app" aria-label="Install app">↓</button>
-        <button id="report-btn" class="icon-btn" title="Report" aria-label="Report">📊</button>
-        <button id="logout-btn" class="icon-btn" title="Lock" aria-label="Lock">🔒</button>
+        <button id="install-btn" class="icon-btn hidden" title="Install app" aria-label="Install app">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </button>
+        <button id="report-btn" class="icon-btn" title="Report" aria-label="Report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+        </button>
+        <button id="logout-btn" class="icon-btn" title="Lock" aria-label="Lock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </button>
       </div>
     </header>
 
@@ -50,15 +62,15 @@
 
     <nav id="tabbar">
       <button class="tab" data-tab="mix">
-        <svg viewBox="0 0 24 24"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3zm0 2.2L5.5 8.4 12 11.6l6.5-3.2L12 5.2zM5 10.1v5.2l6 3v-5.2l-6-3zm14 0l-6 3v5.2l6-3v-5.2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 12h6M9 16h4"/></svg>
         <span>Product Mix</span>
       </button>
       <button class="tab" data-tab="stock">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v3H3V5a1 1 0 011-1zm-1 6h18v9a1 1 0 01-1 1H4a1 1 0 01-1-1v-9zm6 3v2h6v-2H9z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>
         <span>Stock</span>
       </button>
       <button class="tab" data-tab="menu">
-        <svg viewBox="0 0 24 24"><path d="M8.1 13.34L10.93 10.5 4.62 4.19a4.5 4.5 0 000 6.36l3.48 2.79zm6.53-1.8l4.6-4.6a1 1 0 00-1.42-1.41l-3.53 3.53-.7-.7 3.53-3.54A1 1 0 0015.7 3.4l-4.6 4.6a2.5 2.5 0 000 3.54l.7.7-8.4 8.4a1 1 0 101.4 1.42l8.4-8.4.72.7a2.5 2.5 0 003.53 0l-.7-.71 4.16 4.16a1 1 0 001.41-1.41l-4.86-4.87-2.83 2.01z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2Z"/><path d="M12 6.5v13"/></svg>
         <span>Menu</span>
       </button>
     </nav>
@@ -67,6 +79,10 @@
   <!-- Bottom sheet -->
   <div id="backdrop" class="hidden"></div>
   <div id="sheet" class="hidden" role="dialog" aria-modal="true"></div>
+
+  <!-- Centered confirm dialog -->
+  <div id="dialog-backdrop" class="hidden"></div>
+  <div id="dialog" class="hidden" role="dialog" aria-modal="true"></div>
 
   <div id="toast" class="hidden"></div>
 

@@ -215,29 +215,71 @@ app.delete('/api/stock-items/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// Upsert by name. Only columns present in the upload are written, so a partial
-// re-upload (e.g. Name + Category only) never wipes the other fields.
+// Bulk upsert from an uploaded file. Two smart modes per row:
+//  - Row has a valid `id` column  -> update THAT exact item (lets you rename it).
+//  - Row has no id                -> upsert by name; only columns present in the
+//    file are written, so a partial re-upload never wipes the other fields.
 async function bulkUpsert(collection, items, optionalFields, cats) {
   let inserted = 0, updated = 0, skipped = 0;
   for (const row of items) {
     const src = row || {};
     const name = str(src.name);
-    if (!name) { skipped++; continue; }
-    const set = { name, nameKey: key(name) };
-    const insertDefaults = { createdAt: new Date() };
+    const idRaw = typeof src.id === 'string' ? src.id.trim() : '';
+
+    const set = {};
     for (const [k, max] of Object.entries(optionalFields)) {
       if (typeof src[k] === 'string') set[k] = str(src[k], max);
-      else insertDefaults[k] = '';
     }
-    const r = await db.collection(collection).updateOne(
-      { nameKey: set.nameKey },
-      { $set: set, $setOnInsert: insertDefaults },
-      { upsert: true }
-    );
-    if (r.upsertedCount) inserted++; else updated++;
+
+    // Update by id (rename allowed)
+    if (idRaw && ObjectId.isValid(idRaw)) {
+      if (name) { set.name = name; set.nameKey = key(name); }
+      if (!Object.keys(set).length) { skipped++; continue; }
+      try {
+        const r = await db.collection(collection).updateOne({ _id: new ObjectId(idRaw) }, { $set: set });
+        if (r.matchedCount) updated++; else skipped++;
+      } catch (e) {
+        if (e.code === 11000) { skipped++; } else throw e;
+      }
+      if (set.category) cats.add(set.category);
+      continue;
+    }
+
+    // Upsert by name
+    if (!name) { skipped++; continue; }
+    set.name = name;
+    set.nameKey = key(name);
+    const insertDefaults = { createdAt: new Date() };
+    for (const k of Object.keys(optionalFields)) if (!(k in set)) insertDefaults[k] = '';
+    try {
+      const r = await db.collection(collection).updateOne(
+        { nameKey: set.nameKey },
+        { $set: set, $setOnInsert: insertDefaults },
+        { upsert: true }
+      );
+      if (r.upsertedCount) inserted++; else updated++;
+    } catch (e) {
+      if (e.code === 11000) { skipped++; continue; } else throw e;
+    }
     if (set.category) cats.add(set.category);
   }
   return { inserted, updated, skipped };
+}
+
+// Set one field on many items at once (powers the in-app multi-select bulk edit).
+async function bulkFieldUpdate(collection, catType, allowed, body) {
+  const field = body.field;
+  if (!Object.prototype.hasOwnProperty.call(allowed, field)) return { error: 'Invalid field' };
+  const value = str(body.value, allowed[field]);
+  const oids = (Array.isArray(body.ids) ? body.ids : []).filter((i) => ObjectId.isValid(i)).map((i) => new ObjectId(i));
+  if (!oids.length) return { error: 'No items selected' };
+  const r = await db.collection(collection).updateMany({ _id: { $in: oids } }, { $set: { [field]: value } });
+  if (field === 'category' && value) await ensureCategory(value, catType);
+  return { updated: r.modifiedCount };
+}
+
+function toObjectIds(list) {
+  return (Array.isArray(list) ? list : []).filter((i) => ObjectId.isValid(i)).map((i) => new ObjectId(i));
 }
 
 app.post('/api/stock-items/bulk', wrap(async (req, res) => {
@@ -251,6 +293,27 @@ app.post('/api/stock-items/bulk', wrap(async (req, res) => {
   }, cats);
   for (const c of cats) await ensureCategory(c, 'stock');
   res.json(result);
+}));
+
+app.post('/api/stock-items/bulk-update', wrap(async (req, res) => {
+  const out = await bulkFieldUpdate('stockItems', 'stock',
+    { category: 60, purchaseUnit: UNITS_MAX_LEN, consumptionUnit: UNITS_MAX_LEN }, req.body);
+  if (out.error) return res.status(400).json(out);
+  res.json(out);
+}));
+
+app.post('/api/stock-items/bulk-delete', wrap(async (req, res) => {
+  const oids = toObjectIds(req.body.ids);
+  if (!oids.length) return res.status(400).json({ error: 'No items selected' });
+  const used = await db.collection('productMixes').distinct('items.stockItemId', { 'items.stockItemId': { $in: oids } });
+  const usedSet = new Set(used.map(String));
+  const deletable = oids.filter((id) => !usedSet.has(String(id)));
+  let deleted = 0;
+  if (deletable.length) {
+    const r = await db.collection('stockItems').deleteMany({ _id: { $in: deletable } });
+    deleted = r.deletedCount;
+  }
+  res.json({ deleted, skipped: oids.length - deletable.length });
 }));
 
 /* ---------- menu items ---------- */
@@ -311,6 +374,21 @@ app.post('/api/menu-items/bulk', wrap(async (req, res) => {
   res.json(result);
 }));
 
+app.post('/api/menu-items/bulk-update', wrap(async (req, res) => {
+  const out = await bulkFieldUpdate('menuItems', 'menu',
+    { category: 60, consumptionUnit: UNITS_MAX_LEN }, req.body);
+  if (out.error) return res.status(400).json(out);
+  res.json(out);
+}));
+
+app.post('/api/menu-items/bulk-delete', wrap(async (req, res) => {
+  const oids = toObjectIds(req.body.ids);
+  if (!oids.length) return res.status(400).json({ error: 'No items selected' });
+  await db.collection('productMixes').deleteMany({ menuItemId: { $in: oids } });
+  const r = await db.collection('menuItems').deleteMany({ _id: { $in: oids } });
+  res.json({ deleted: r.deletedCount, skipped: 0 });
+}));
+
 /* ---------- product mixes ---------- */
 
 // All mixes (light) - used for status badges on the menu list
@@ -329,7 +407,7 @@ app.get('/api/product-mixes/:menuItemId', wrap(async (req, res) => {
   if (!ObjectId.isValid(req.params.menuItemId)) return res.status(400).json({ error: 'Invalid id' });
   const mix = await db.collection('productMixes').findOne({ menuItemId: new ObjectId(req.params.menuItemId) });
   if (!mix) return res.json(null);
-  res.json({ menuItemId: mix.menuItemId, status: mix.status, items: mix.items || [] });
+  res.json({ menuItemId: mix.menuItemId, status: mix.status, items: mix.items || [], notes: mix.notes || '' });
 }));
 
 // Save mix. Empty items list = clear the mix (back to "not done").
@@ -340,6 +418,7 @@ app.put('/api/product-mixes/:menuItemId', wrap(async (req, res) => {
   if (!menuItem) return res.status(404).json({ error: 'Menu item not found' });
 
   const status = req.body.status === 'confirmed' ? 'confirmed' : 'draft';
+  const notes = str(req.body.notes, NOTES_MAX_LEN);
   const rawItems = Array.isArray(req.body.items) ? req.body.items : [];
 
   if (rawItems.length === 0) {
@@ -362,7 +441,7 @@ app.put('/api/product-mixes/:menuItemId', wrap(async (req, res) => {
 
   await db.collection('productMixes').updateOne(
     { menuItemId },
-    { $set: { menuItemId, items, status, updatedAt: new Date() } },
+    { $set: { menuItemId, items, status, notes, updatedAt: new Date() } },
     { upsert: true }
   );
   res.json({ ok: true, status });
@@ -384,6 +463,7 @@ app.get('/api/report', wrap(async (req, res) => {
       name: m.name,
       category: m.category || '',
       status: mix ? mix.status : 'not_done',
+      notes: mix ? mix.notes || '' : '',
       items: (mix ? mix.items || [] : []).map((it) => {
         const s = stockMap.get(String(it.stockItemId));
         return {
