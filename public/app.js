@@ -22,6 +22,9 @@
     clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 12h6M9 16h4"/></svg>',
     box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/></svg>',
     book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2Z"/><path d="M12 6.5v13"/></svg>',
+    pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4"/><path d="M4 20l1.2-4.2L16 5a2.1 2.1 0 0 1 3 3L8.2 18.8 4 20z"/></svg>',
+    archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M5 8v10.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V8"/><path d="M12 11v6m0 0 2.5-2.5M12 17l-2.5-2.5"/></svg>',
+    restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M5 8v10.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V8"/><path d="M12 17v-6m0 0 2.5 2.5M12 11l-2.5 2.5"/></svg>',
   };
 
   var S = {
@@ -75,6 +78,32 @@
     }
     d.querySelector('[data-dlg="cancel"]').onclick = close;
     d.querySelector('[data-dlg="ok"]').onclick = function () { close(); onYes(); };
+    $('#dialog-backdrop').onclick = close;
+  }
+
+  function promptDialog(opts, onSubmit) {
+    var d = $('#dialog');
+    d.innerHTML =
+      '<div class="dialog-title">' + esc(opts.title) + '</div>' +
+      '<input type="text" id="dlg-input" maxlength="' + (opts.maxlength || 60) + '" placeholder="' + esc(opts.placeholder || '') + '" value="' + esc(opts.value || '') + '" style="margin-top:14px">' +
+      '<div class="dialog-actions">' +
+        '<button class="btn btn-outline" data-dlg="cancel">Cancel</button>' +
+        '<button class="btn btn-primary" data-dlg="ok">' + esc(opts.confirm || 'Save') + '</button>' +
+      '</div>';
+    d.classList.remove('hidden');
+    $('#dialog-backdrop').classList.remove('hidden');
+    var input = $('#dlg-input');
+    setTimeout(function () { input.focus(); input.select(); }, 40);
+    function close() {
+      d.classList.add('hidden');
+      $('#dialog-backdrop').classList.add('hidden');
+      d.innerHTML = '';
+      $('#dialog-backdrop').onclick = null;
+    }
+    function submit() { var v = input.value.trim(); close(); onSubmit(v); }
+    d.querySelector('[data-dlg="cancel"]').onclick = close;
+    d.querySelector('[data-dlg="ok"]').onclick = submit;
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
     $('#dialog-backdrop').onclick = close;
   }
 
@@ -520,7 +549,7 @@
   }
 
   function catSelect(kind, value) {
-    var cats = S.cats[kind];
+    var cats = S.cats[kind].filter(function (c) { return !c.archived; });
     var known = cats.some(function (c) { return c.name === value; });
     var opts = '<option value="">— none —</option>' + cats.map(function (c) {
       return '<option value="' + esc(c.name) + '"' + (c.name === value ? ' selected' : '') + '>' + esc(c.name) + '</option>';
@@ -613,9 +642,21 @@
     var rows = cats.length
       ? cats.map(function (c) {
           var n = categoryCount(kind, c.name);
-          return '<div class="cat-row">' +
-            '<span class="cat-name">' + esc(c.name) + '<span class="cat-count"> · ' + n + ' item' + (n === 1 ? '' : 's') + '</span></span>' +
-            '<button class="cat-del" data-action="cat-del" data-kind="' + kind + '" data-id="' + c._id + '" aria-label="Delete">' + ICON.trash + '</button></div>';
+          var archived = !!c.archived;
+          var name = esc(c.name);
+          var acts = '<button class="cat-act" data-action="cat-edit" data-kind="' + kind + '" data-id="' + c._id + '" data-name="' + name + '" aria-label="Rename">' + ICON.pencil + '</button>';
+          if (archived) {
+            acts += '<button class="cat-act" data-action="cat-restore" data-kind="' + kind + '" data-id="' + c._id + '" aria-label="Restore">' + ICON.restore + '</button>';
+          } else if (n > 0) {
+            acts += '<button class="cat-act" data-action="cat-archive" data-kind="' + kind + '" data-id="' + c._id + '" data-name="' + name + '" aria-label="Archive">' + ICON.archive + '</button>';
+          }
+          if (n === 0) {
+            acts += '<button class="cat-act danger" data-action="cat-del" data-kind="' + kind + '" data-id="' + c._id + '" data-name="' + name + '" aria-label="Delete">' + ICON.trash + '</button>';
+          }
+          return '<div class="cat-row' + (archived ? ' archived' : '') + '">' +
+            '<span class="cat-name">' + name + (archived ? '<span class="cat-tag">Archived</span>' : '') +
+            '<span class="cat-count"> · ' + n + ' item' + (n === 1 ? '' : 's') + '</span></span>' +
+            '<span class="cat-actions">' + acts + '</span></div>';
         }).join('')
       : emptyState('tag', 'No categories yet', 'Add one below, then pick it from the dropdown when you create items.');
 
@@ -627,20 +668,60 @@
     );
   }
 
+  // reload data, refresh the list underneath, and re-render the open categories sheet
+  function refreshCats(kind) {
+    return loadAll().then(function () { render(); openCatSheet(kind); });
+  }
+
   function addCategory(kind) {
     var name = $('#cat-new').value.trim();
     if (!name) return;
     api('/categories', { method: 'POST', body: { name: name, type: kind } })
-      .then(function () { return loadAll(); })
-      .then(function () { openCatSheet(kind); toast('Category added'); })
+      .then(function () { return refreshCats(kind); })
+      .then(function () { toast('Category added'); })
       .catch(function (err) { toast(err.message, true); });
   }
 
-  function deleteCategory(kind, id) {
-    api('/categories/' + id, { method: 'DELETE' })
-      .then(function () { return loadAll(); })
-      .then(function () { openCatSheet(kind); })
-      .catch(function (err) { toast(err.message, true); });
+  function renameCategory(kind, id, current) {
+    promptDialog({ title: 'Rename category', value: current, placeholder: 'Category name', confirm: 'Save' }, function (name) {
+      if (!name || name === current) return;
+      api('/categories/' + id, { method: 'PUT', body: { name: name } })
+        .then(function (r) {
+          return refreshCats(kind).then(function () {
+            toast('Renamed' + (r.updated ? ' · ' + r.updated + ' item' + (r.updated === 1 ? '' : 's') + ' updated' : ''));
+          });
+        })
+        .catch(function (err) { toast(err.message, true); });
+    });
+  }
+
+  function archiveCategory(kind, id, name, archived) {
+    function run() {
+      api('/categories/' + id + '/archive', { method: 'POST', body: { archived: archived } })
+        .then(function () { return refreshCats(kind); })
+        .then(function () { toast(archived ? 'Archived' : 'Restored'); })
+        .catch(function (err) { toast(err.message, true); });
+    }
+    if (archived) {
+      confirmDialog({
+        title: 'Archive “' + name + '”?',
+        body: 'It will be hidden from the category dropdowns. Items already using it keep it, and you can restore it any time.',
+        confirm: 'Archive',
+      }, run);
+    } else { run(); }
+  }
+
+  function deleteCategory(kind, id, name) {
+    confirmDialog({
+      title: 'Delete “' + name + '”?',
+      body: 'This category isn’t used by any item. This can’t be undone.',
+      danger: true, confirm: 'Delete',
+    }, function () {
+      api('/categories/' + id, { method: 'DELETE' })
+        .then(function () { return refreshCats(kind); })
+        .then(function () { toast('Deleted'); })
+        .catch(function (err) { toast(err.message, true); });
+    });
   }
 
   /* ---------- multi-select bulk edit ---------- */
@@ -1019,7 +1100,10 @@
       case 'item-delete': deleteItem(kind, id); break;
       case 'cats-open': openCatSheet(kind); break;
       case 'cat-add': addCategory(kind); break;
-      case 'cat-del': deleteCategory(kind, id); break;
+      case 'cat-edit': renameCategory(kind, id, el.getAttribute('data-name')); break;
+      case 'cat-archive': archiveCategory(kind, id, el.getAttribute('data-name'), true); break;
+      case 'cat-restore': archiveCategory(kind, id, null, false); break;
+      case 'cat-del': deleteCategory(kind, id, el.getAttribute('data-name')); break;
       case 'select-start':
         if ((kind === 'stock' ? S.stock : S.menu).length === 0) { toast('Add some items first', true); break; }
         S.select = { active: true, kind: kind, ids: {} };

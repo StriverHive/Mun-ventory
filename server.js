@@ -162,9 +162,50 @@ app.post('/api/categories', wrap(async (req, res) => {
   res.json(cat);
 }));
 
+function catRegex(name) {
+  return new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+}
+function catCollection(type) {
+  return type === 'menu' ? 'menuItems' : 'stockItems';
+}
+function categoryUsage(type, name) {
+  return db.collection(catCollection(type)).countDocuments({ category: catRegex(name) });
+}
+
+// Rename a category and cascade the new name to every item that used it
+app.put('/api/categories/:id', wrap(async (req, res) => {
+  if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
+  const name = str(req.body.name, 60);
+  if (!name) return res.status(400).json({ error: 'Category name is required' });
+  const cat = await db.collection('categories').findOne({ _id: new ObjectId(req.params.id) });
+  if (!cat) return res.status(404).json({ error: 'Category not found' });
+  const newKey = key(name);
+  if (newKey !== cat.nameKey) {
+    const dup = await db.collection('categories').findOne({ nameKey: newKey, type: cat.type, _id: { $ne: cat._id } });
+    if (dup) return res.status(409).json({ error: 'A category with that name already exists' });
+  }
+  await db.collection('categories').updateOne({ _id: cat._id }, { $set: { name, nameKey: newKey } });
+  const r = await db.collection(catCollection(cat.type)).updateMany({ category: catRegex(cat.name) }, { $set: { category: name } });
+  res.json({ ok: true, updated: r.modifiedCount });
+}));
+
+// Archive / restore a category (archived categories are hidden from the dropdowns)
+app.post('/api/categories/:id/archive', wrap(async (req, res) => {
+  if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
+  const archived = req.body.archived !== false;
+  const r = await db.collection('categories').updateOne({ _id: new ObjectId(req.params.id) }, { $set: { archived } });
+  if (!r.matchedCount) return res.status(404).json({ error: 'Category not found' });
+  res.json({ ok: true, archived });
+}));
+
+// Delete only when unused; otherwise the client should archive instead
 app.delete('/api/categories/:id', wrap(async (req, res) => {
   if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
-  await db.collection('categories').deleteOne({ _id: new ObjectId(req.params.id) });
+  const cat = await db.collection('categories').findOne({ _id: new ObjectId(req.params.id) });
+  if (!cat) return res.json({ ok: true });
+  const used = await categoryUsage(cat.type, cat.name);
+  if (used > 0) return res.status(409).json({ error: `In use by ${used} item${used > 1 ? 's' : ''}. Archive it instead.` });
+  await db.collection('categories').deleteOne({ _id: cat._id });
   res.json({ ok: true });
 }));
 

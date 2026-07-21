@@ -301,12 +301,17 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); 
 .sheet-actions { display: flex; gap: 10px; margin-top: 22px; }
 .sheet-actions .btn { flex: 1; }
 
-.cat-row { display: flex; align-items: center; gap: 8px; padding: 14px 2px; border-bottom: 1px solid var(--fill); }
-.cat-row .cat-name { flex: 1; font-weight: 700; font-size: 15px; color: var(--ink); }
+.cat-row { display: flex; align-items: center; gap: 8px; padding: 10px 2px; border-bottom: 1px solid var(--fill); }
+.cat-row .cat-name { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; color: var(--ink); }
 .cat-row .cat-count { color: var(--hint); font-weight: 400; font-size: 13px; }
-.cat-del { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; color: var(--hint); display: flex; align-items: center; justify-content: center; }
-.cat-del svg { width: 19px; height: 19px; }
-.cat-del:active { background: var(--danger-bg); color: var(--danger); }
+.cat-row.archived .cat-name { color: var(--hint); }
+.cat-tag { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; color: var(--text2); background: var(--fill); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 2px 8px; vertical-align: middle; }
+.cat-actions { flex: 0 0 auto; display: flex; gap: 2px; }
+.cat-act { width: 36px; height: 36px; border-radius: 10px; color: var(--text2); display: flex; align-items: center; justify-content: center; }
+.cat-act svg { width: 19px; height: 19px; }
+.cat-act:active { background: var(--fill); }
+.cat-act.danger { color: var(--hint); }
+.cat-act.danger:active { background: var(--danger-bg); color: var(--danger); }
 .cat-add { display: flex; gap: 8px; margin-top: 14px; }
 .cat-add input { flex: 1; }
 .cat-add .btn { flex: 0 0 auto; }
