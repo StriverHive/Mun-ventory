@@ -94,11 +94,11 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); 
 #login-screen {
   min-height: 100vh; min-height: 100dvh;
   background: var(--pink-50);
-  display: flex; flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 44px) 28px calc(env(safe-area-inset-bottom) + 22px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top) + 24px) 28px calc(env(safe-area-inset-bottom) + 24px);
 }
-.login-top { flex: 0 0 auto; text-align: center; }
-.login-banner { width: 100%; max-width: 300px; display: block; margin: 6px auto 8px; }
+.login-top { flex: 0 0 auto; text-align: center; width: 100%; max-width: 320px; }
+.login-banner { width: 100%; max-width: 280px; display: block; margin: 0 auto 8px; }
 .login-sub { color: var(--text2); font-size: 15px; margin-top: 6px; }
 .pin-dots { display: flex; justify-content: center; gap: 16px; margin-top: 28px; min-height: 16px; }
 .pin-dots .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pink); background: transparent; transition: background .1s; }
@@ -106,7 +106,7 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); 
 .pin-dots.err .dot { border-color: var(--danger); }
 .pin-dots.err .dot.filled { background: var(--danger); }
 .login-error { color: var(--danger); font-size: 14px; font-weight: 600; min-height: 20px; margin-top: 14px; }
-.login-bottom { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; gap: 18px; width: 100%; max-width: 330px; margin: 0 auto; }
+.login-bottom { flex: 0 0 auto; display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 320px; margin: 34px auto 0; }
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .keypad button {
   height: 62px; border-radius: 20px; font-size: 26px; font-weight: 600;
