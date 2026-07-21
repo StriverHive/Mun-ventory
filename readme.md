@@ -58,16 +58,54 @@ Install app** to install the PWA. Every `git push` to `master` auto-deploys.
 > **Free-tier note:** the service sleeps after ~15 min of inactivity and takes a few seconds
 > to wake on the next visit. Your data is safe in MongoDB Atlas regardless.
 
-## Deploy on Hostinger (VPS / Node hosting)
+## Deploy on Hostinger
 
-1. Upload the project (without `node_modules` and `.env`).
-2. `npm install`, create `.env` with the variables above.
-3. Run with `npm start` (or keep it alive with `pm2 start server.js --name munventory`).
-4. Put it behind HTTPS (required for PWA install and image sharing).
+This is a **Node.js** app (Express server), so use one of Hostinger's Node-capable options.
+First, in **MongoDB Atlas → Network Access**, add `0.0.0.0/0` (allow from anywhere) — or your
+server's IP — so Hostinger can reach the database.
+
+### Option A — hPanel “Setup Node.js App” (Premium / Business / Cloud plans)
+
+1. **hPanel → Advanced → Node.js** (or **Website → Setup Node.js App**) → **Create application**:
+   - **Node.js version:** 18 or newer (20 recommended)
+   - **Application mode:** Production
+   - **Application root:** e.g. `munventory`
+   - **Application startup file:** `server.js`
+   - **Application URL:** your domain or subdomain
+2. **Put the code in the application root** — easiest is the built-in Git tool:
+   *Repository URL* `https://github.com/StriverHive/Mun-ventory`, *Branch* `master`.
+   (Or upload a ZIP of the project **without** `node_modules` and `.env`, then extract.)
+3. In the app's **Environment variables** section add (do **not** add `PORT` — Hostinger sets it):
+   - `MONGODB_URI` = your Atlas connection string
+   - `APP_PIN` = `2026`
+   - `SESSION_SECRET` = a long random string (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+4. Click **Run NPM Install**, then **Start / Restart** the app.
+5. Open the Application URL over **https** → browser menu → **Add to Home Screen** to install the PWA.
+
+### Option B — Hostinger VPS (full control)
+
+```bash
+# SSH into the VPS, then:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && . ~/.nvm/nvm.sh
+nvm install 20
+git clone https://github.com/StriverHive/Mun-ventory.git && cd Mun-ventory
+npm install
+cp .env.example .env        # then edit .env: MONGODB_URI, APP_PIN, SESSION_SECRET
+npm install -g pm2
+pm2 start server.js --name munventory && pm2 save && pm2 startup
+```
+
+Then put **nginx** in front as a reverse proxy to `http://localhost:3000` and add **HTTPS**
+(Hostinger SSL or Let's Encrypt/Certbot). HTTPS is required for PWA install and image sharing.
 
 ## Notes
 
-- `.env` is git-ignored — secrets never reach the repository.
+- `.env` is git-ignored — secrets never reach the repository. On hPanel Node apps you can set the
+  values as Environment Variables instead of a `.env` file; both work.
 - The MongoDB database used is `munventory` (created automatically on first write).
-- Behind Render (or any reverse proxy) the default settings are correct. If you ever run `node server.js` exposed **directly** to the internet (no proxy in front), set `TRUST_PROXY=0` in `.env` so client IPs can't be spoofed.
-- Wrong-PIN attempts are limited per device **and** globally (20 fails / 15 min), so the PIN can't be brute-forced.
+- Behind Hostinger/nginx (or any reverse proxy) the default settings are correct. Only if you run
+  `node server.js` exposed **directly** to the internet (no proxy) set `TRUST_PROXY=0`.
+- Wrong-PIN attempts are limited per device **and** globally (20 fails / 15 min).
+- **Seeing an old/broken page after redeploying?** The PWA service worker may be serving a cached
+  copy. Do a hard refresh (**Ctrl+Shift+R**), or in DevTools → Application → Storage →
+  **Clear site data**. New visitors are unaffected; the app self-heals on the next load.
