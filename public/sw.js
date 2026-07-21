@@ -1,5 +1,5 @@
 /* Mun-ventory service worker */
-var CACHE = 'munventory-v7';
+var CACHE = 'munventory-v8';
 var ASSETS = [
   '/',
   '/styles.css',
@@ -11,6 +11,7 @@ var ASSETS = [
   '/icons/icon-512.png',
   '/icons/maskable-512.png',
   '/icons/full-logo.png',
+  '/icons/favicon.png',
 ];
 
 // App-owned files that change between deploys: always try the network first

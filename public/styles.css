@@ -98,11 +98,7 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); 
   padding: calc(env(safe-area-inset-top) + 44px) 28px calc(env(safe-area-inset-bottom) + 22px);
 }
 .login-top { flex: 0 0 auto; text-align: center; }
-.login-logo {
-  width: 84px; height: 84px; border-radius: 22px; display: block; margin: 6px auto 18px;
-  box-shadow: var(--sh-primary);
-}
-.login-name { font-size: 26px; font-weight: 800; letter-spacing: -.3px; }
+.login-banner { width: 100%; max-width: 300px; display: block; margin: 6px auto 8px; }
 .login-sub { color: var(--text2); font-size: 15px; margin-top: 6px; }
 .pin-dots { display: flex; justify-content: center; gap: 16px; margin-top: 28px; min-height: 16px; }
 .pin-dots .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pink); background: transparent; transition: background .1s; }
@@ -135,8 +131,8 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); 
   background: rgba(255,255,255,.92); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--ink); }
-.brand-logo { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; display: inline-block; }
+.brand { display: flex; align-items: center; }
+.brand-logo-full { height: 32px; width: auto; display: block; }
 .topbar-actions { display: flex; gap: 4px; }
 
 #view { padding: 14px 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px); }
