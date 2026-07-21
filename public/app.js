@@ -354,7 +354,7 @@
     $('#view').innerHTML =
       '<div class="searchbar"><input type="search" id="' + kind + '-search" placeholder="Search ' + label + ' items…" value="' + esc(S.search[kind]) + '"></div>' +
       '<div class="list-actions">' +
-        '<button class="btn btn-outline btn-sm" data-action="bulk-open" data-kind="' + kind + '">⬆ Bulk Upload</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-open" data-kind="' + kind + '">↑ Bulk Upload</button>' +
         '<button class="btn btn-outline btn-sm" data-action="cats-open" data-kind="' + kind + '">🏷 Categories</button>' +
       '</div>' +
       cards + empty +
@@ -522,7 +522,7 @@
     openSheet(
       '<div class="sheet-title">Bulk Upload — ' + (kind === 'stock' ? 'Stock' : 'Menu') + ' Items</div>' +
       '<p class="preview-note">Upload a CSV or Excel file with these columns:<br><b>' + cols + '</b><br>Existing items with the same name will be updated.</p>' +
-      '<button class="btn btn-outline btn-block btn-sm" data-action="bulk-template" data-kind="' + kind + '">⬇ Download Template</button>' +
+      '<button class="btn btn-outline btn-block btn-sm" data-action="bulk-template" data-kind="' + kind + '">↓ Download Template</button>' +
       '<label class="file-drop" for="bulk-file">📄 Tap to choose a CSV / Excel file' +
       '<input type="file" id="bulk-file" accept=".csv,.xlsx,.xls" class="hidden"></label>' +
       '<div id="bulk-preview"></div>' +
@@ -629,7 +629,7 @@
       '<div class="sheet-title">Product Mix Report</div>' +
       '<p class="preview-note">Excel report of every menu item with its stock items, quantities and status.</p>' +
       '<div class="sheet-actions" style="flex-direction:column">' +
-      '<button class="btn btn-primary btn-block" data-action="report-download">⬇ Download Excel</button>' +
+      '<button class="btn btn-primary btn-block" data-action="report-download">↓ Download Excel</button>' +
       (canShare ? '<button class="btn btn-outline btn-block" data-action="report-share">📤 Share Excel</button>' : '') +
       '</div>'
     );
@@ -694,10 +694,12 @@
     var d = new Date();
     $('#card-stage').innerHTML =
       '<div class="recipe-card" id="recipe-card">' +
-        '<div class="rc-head"><div class="rc-app">Mun-ventory · Product Mix</div>' +
+        '<div class="rc-head"><div class="rc-text">' +
+        '<div class="rc-app">Munchies Inventory · Product Mix</div>' +
         '<h2>' + esc(ed.menuItem.name) + '</h2>' +
         (ed.menuItem.category ? '<div class="rc-meta">' + esc(ed.menuItem.category) + '</div>' : '') +
         '<span class="rc-status">' + STATUS_LABEL[ed.status] + '</span></div>' +
+        '<img class="rc-icon" src="/icons/icon-192.png" alt=""></div>' +
         '<div class="rc-body">' + rows + '</div>' +
         '<div class="rc-foot">' + d.toLocaleDateString() + '</div>' +
       '</div>';

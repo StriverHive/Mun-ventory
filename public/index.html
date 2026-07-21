@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mun-ventory</title>
   <meta name="description" content="Stock, menu & product mix manager">
-  <meta name="theme-color" content="#ec4899">
+  <meta name="theme-color" content="#ef1980">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -20,8 +20,7 @@
   <!-- PIN lock screen -->
   <div id="login-screen" class="hidden">
     <div class="login-card">
-      <div class="login-logo">M</div>
-      <h1>Mun-ventory</h1>
+      <img class="login-banner" src="/icons/full-logo.png" alt="Munchies Inventory">
       <p class="login-sub">Enter PIN to unlock</p>
       <div id="pin-dots" class="pin-dots"></div>
       <p id="login-error" class="login-error"></p>
@@ -39,9 +38,9 @@
   <!-- App -->
   <div id="app" class="hidden">
     <header id="topbar">
-      <div class="brand"><span class="brand-logo">M</span> Mun-ventory</div>
+      <div class="brand"><img class="brand-logo" src="/icons/icon-192.png" alt=""> Mun-ventory</div>
       <div class="topbar-actions">
-        <button id="install-btn" class="icon-btn hidden" title="Install app" aria-label="Install app">⬇</button>
+        <button id="install-btn" class="icon-btn hidden" title="Install app" aria-label="Install app">↓</button>
         <button id="report-btn" class="icon-btn" title="Report" aria-label="Report">📊</button>
         <button id="logout-btn" class="icon-btn" title="Lock" aria-label="Lock">🔒</button>
       </div>
