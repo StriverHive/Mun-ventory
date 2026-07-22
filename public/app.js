@@ -25,17 +25,20 @@
     pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4"/><path d="M4 20l1.2-4.2L16 5a2.1 2.1 0 0 1 3 3L8.2 18.8 4 20z"/></svg>',
     archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M5 8v10.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V8"/><path d="M12 11v6m0 0 2.5-2.5M12 17l-2.5-2.5"/></svg>',
     restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M5 8v10.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V8"/><path d="M12 17v-6m0 0 2.5 2.5M12 11l-2.5 2.5"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/></svg>',
   };
 
   var S = {
     tab: 'mix',
-    stock: [],
-    menu: [],
-    mixes: [],            // [{menuItemId, status, itemCount}]
-    cats: { stock: [], menu: [] },
+    stock: [],            // server-filtered stock list (current view)
+    menu: [],             // server-filtered menu list (current view)
+    mixList: [],          // server-filtered [{_id,name,category,status,itemCount}]
+    mixCounts: { all: 0, not_done: 0, draft: 0, confirmed: 0 },
+    cats: { stock: [], menu: [] }, // all categories (with .count and .archived)
     search: { mix: '', stock: '', menu: '' },
-    mixFilter: 'all',
-    editor: null,          // { menuItem, items:[{stockItemId, qty}], status, dirty, stockSearch }
+    catFilter: { mix: '', stock: '', menu: '' }, // '' = all categories
+    mixFilter: 'all',     // status filter
+    editor: null,          // { menuItem, items:[{stockItemId, qty}], allStock, status, notes, dirty, stockSearch }
     select: { active: false, kind: null, ids: {} }, // multi-select bulk-edit mode
     deferredPrompt: null,
     pin: '',
@@ -203,7 +206,7 @@
   /* ---------- boot / data ---------- */
 
   function boot() {
-    return loadAll().then(function () {
+    return refreshAll().then(function () {
       $('#login-screen').classList.add('hidden');
       $('#app').classList.remove('hidden');
       render();
@@ -212,29 +215,60 @@
     });
   }
 
-  function loadAll() {
-    return Promise.all([
-      api('/stock-items'),
-      api('/menu-items'),
-      api('/product-mixes'),
-      api('/categories?type=stock'),
-      api('/categories?type=menu'),
-    ]).then(function (r) {
-      S.stock = r[0]; S.menu = r[1]; S.mixes = r[2];
-      S.cats.stock = r[3]; S.cats.menu = r[4];
+  function qstr(params) {
+    var parts = [];
+    Object.keys(params).forEach(function (k) {
+      if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k]));
     });
+    return parts.length ? '?' + parts.join('&') : '';
   }
 
-  function mixByMenuId(id) {
-    for (var i = 0; i < S.mixes.length; i++) {
-      if (String(S.mixes[i].menuItemId) === String(id)) return S.mixes[i];
-    }
-    return null;
+  // Monotonic token so a slow/out-of-order list response never overwrites a newer one
+  var loadSeq = 0;
+
+  function loadCats() {
+    return Promise.all([api('/categories?type=stock'), api('/categories?type=menu')])
+      .then(function (r) { S.cats.stock = r[0]; S.cats.menu = r[1]; });
+  }
+  function loadStock() {
+    var t = ++loadSeq;
+    return api('/stock-items' + qstr({ category: S.catFilter.stock, q: S.search.stock }))
+      .then(function (items) { if (t === loadSeq) S.stock = items; });
+  }
+  function loadMenu() {
+    var t = ++loadSeq;
+    return api('/menu-items' + qstr({ category: S.catFilter.menu, q: S.search.menu }))
+      .then(function (items) { if (t === loadSeq) S.menu = items; });
+  }
+  function loadMixList() {
+    var t = ++loadSeq;
+    return api('/mix-list' + qstr({ category: S.catFilter.mix, q: S.search.mix, status: S.mixFilter === 'all' ? '' : S.mixFilter }))
+      .then(function (r) { if (t === loadSeq) { S.mixList = r.items; S.mixCounts = r.counts; } });
+  }
+  function loadCurrent() {
+    if (S.tab === 'mix') return loadMixList();
+    if (S.tab === 'stock') return loadStock();
+    return loadMenu();
+  }
+  // categories + the current tab's list
+  function refreshAll() {
+    return loadCats().then(loadCurrent);
   }
 
-  function statusOf(menuItem) {
-    var m = mixByMenuId(menuItem._id);
-    return m ? m.status : 'not_done';
+  // reload the current list from the server, then update only the list body
+  function reloadList(after) {
+    return loadCurrent().then(function () {
+      if (S.editor) return;
+      if (S.tab === 'mix') renderMixMain();
+      else if (S.select.active && S.select.kind === S.tab) renderSelectMain(S.tab);
+      else renderItemMain(S.tab);
+      if (after) after();
+    }).catch(function (err) { toast(err.message, true); });
+  }
+
+  function filtersActive(kind) {
+    if (kind === 'mix') return !!(S.search.mix || S.catFilter.mix || S.mixFilter !== 'all');
+    return !!(S.search[kind] || S.catFilter[kind]);
   }
 
   var STATUS_LABEL = { draft: 'Draft', confirmed: 'Confirmed', not_done: 'Not done' };
@@ -249,53 +283,66 @@
     });
     if (S.editor) return renderEditor();
     if (S.tab === 'mix') renderMixList();
-    else if (S.tab === 'stock') renderItemList('stock');
-    else renderItemList('menu');
+    else renderItemList(S.tab);
+  }
+
+  // Category filter chips (only categories that have items are shown).
+  // The mix page filters menu items, so it uses the menu category list.
+  function catChipsHtml(kind) {
+    var catKey = kind === 'mix' ? 'menu' : kind;
+    var cats = S.cats[catKey].filter(function (c) { return c.count > 0; });
+    if (!cats.length) return '';
+    var active = S.catFilter[kind];
+    var chips = '<button class="chip cat-chip' + (active === '' ? ' active' : '') + '" data-action="cat-filter" data-kind="' + kind + '" data-val="">All categories</button>';
+    chips += cats.map(function (c) {
+      return '<button class="chip cat-chip' + (active === c.name ? ' active' : '') + '" data-action="cat-filter" data-kind="' + kind + '" data-val="' + esc(c.name) + '">' +
+        esc(c.name) + '</button>';
+    }).join('');
+    return '<div class="chips cat-chips">' + chips + '</div>';
   }
 
   /* ----- product mix list ----- */
 
   function renderMixList() {
-    var q = S.search.mix.toLowerCase();
-    var counts = { all: S.menu.length, not_done: 0, draft: 0, confirmed: 0 };
-    S.menu.forEach(function (m) { counts[statusOf(m)]++; });
+    $('#view').innerHTML =
+      searchbarHtml('mix-search', 'Search menu items…', S.search.mix) +
+      '<div id="list-main"></div>';
+    bindSearch('mix-search', 'mix');
+    renderMixMain();
+  }
 
-    var list = S.menu.filter(function (m) {
-      if (q && m.name.toLowerCase().indexOf(q) === -1) return false;
-      if (S.mixFilter !== 'all' && statusOf(m) !== S.mixFilter) return false;
-      return true;
-    });
-
-    var chips = [
-      ['all', 'All', counts.all],
-      ['not_done', 'Not done', counts.not_done],
-      ['draft', 'Drafts', counts.draft],
-      ['confirmed', 'Confirmed', counts.confirmed],
-    ].map(function (c) {
-      return '<button class="chip' + (S.mixFilter === c[0] ? ' active' : '') + '" data-action="mix-filter" data-val="' + c[0] + '">' +
-        c[1] + ' <span class="n">' + c[2] + '</span></button>';
+  function renderMixMain() {
+    var c = S.mixCounts;
+    var statusChips = [
+      ['all', 'All', c.all],
+      ['not_done', 'Not done', c.not_done],
+      ['draft', 'Drafts', c.draft],
+      ['confirmed', 'Confirmed', c.confirmed],
+    ].map(function (x) {
+      return '<button class="chip' + (S.mixFilter === x[0] ? ' active' : '') + '" data-action="mix-filter" data-val="' + x[0] + '">' +
+        x[1] + ' <span class="n">' + x[2] + '</span></button>';
     }).join('');
 
-    var cards = list.map(function (m) {
-      var st = statusOf(m);
-      var mix = mixByMenuId(m._id);
-      var sub = [m.category, mix && mix.itemCount ? mix.itemCount + ' ingredient' + (mix.itemCount > 1 ? 's' : '') : null]
+    var cards = S.mixList.map(function (m) {
+      var st = m.status;
+      var sub = [m.category, m.itemCount ? m.itemCount + ' ingredient' + (m.itemCount > 1 ? 's' : '') : null]
         .filter(Boolean).join(' • ') || 'Tap to build the mix';
       return '<button class="item-card mix-card ' + STATUS_CARD[st] + '" data-action="open-mix" data-id="' + m._id + '">' +
         '<div class="ic-main"><div class="ic-name">' + esc(m.name) + '</div><div class="ic-sub">' + esc(sub) + '</div></div>' +
         '<span class="badge ' + STATUS_BADGE[st] + '">' + STATUS_LABEL[st] + '</span></button>';
     }).join('');
 
-    var empty = S.menu.length === 0
-      ? emptyState('clipboard', 'No product mixes yet', 'Add menu items in the Menu tab — each one shows up here, ready to fill in.')
-      : (list.length === 0 ? emptyState('search', 'Nothing matches', 'Try a different search or filter.') : '');
+    var empty = '';
+    if (!S.mixList.length) {
+      empty = filtersActive('mix')
+        ? emptyState('search', 'Nothing matches', 'Try a different search, category or status.')
+        : emptyState('clipboard', 'No product mixes yet', 'Add menu items in the Menu tab — each one shows up here, ready to fill in.');
+    }
 
-    $('#view').innerHTML =
-      searchbarHtml('mix-search', 'Search menu items…', S.search.mix) +
-      '<div class="chips">' + chips + '</div>' +
+    $('#list-main').innerHTML =
+      '<div class="chips">' + statusChips + '</div>' +
+      catChipsHtml('mix') +
       cards + empty;
-
-    bindSearch('mix-search', 'mix');
   }
 
   function searchbarHtml(id, placeholder, value) {
@@ -312,11 +359,16 @@
   /* ----- mix editor ----- */
 
   function openMix(menuItemId) {
-    var menuItem = S.menu.find(function (m) { return String(m._id) === String(menuItemId); });
-    if (!menuItem) return;
-    api('/product-mixes/' + menuItemId).then(function (mix) {
+    var mi = S.mixList.find(function (m) { return String(m._id) === String(menuItemId); });
+    if (!mi) return;
+    Promise.all([
+      api('/product-mixes/' + menuItemId),
+      api('/stock-items'), // full stock catalog for the editor's ingredient search
+    ]).then(function (r) {
+      var mix = r[0];
       S.editor = {
-        menuItem: menuItem,
+        menuItem: { _id: mi._id, name: mi.name, category: mi.category },
+        allStock: r[1],
         items: mix ? mix.items.map(function (i) { return { stockItemId: String(i.stockItemId), qty: String(i.qty) }; }) : [],
         status: mix ? mix.status : 'not_done',
         notes: mix && mix.notes ? mix.notes : '',
@@ -329,7 +381,8 @@
   }
 
   function stockById(id) {
-    return S.stock.find(function (s) { return String(s._id) === String(id); });
+    var arr = (S.editor && S.editor.allStock) || [];
+    return arr.find(function (s) { return String(s._id) === String(id); });
   }
 
   function renderEditor() {
@@ -351,7 +404,7 @@
     if (q) {
       var chosen = {};
       ed.items.forEach(function (i) { chosen[i.stockItemId] = true; });
-      var found = S.stock.filter(function (s) {
+      var found = ed.allStock.filter(function (s) {
         return !chosen[String(s._id)] && s.name.toLowerCase().indexOf(q) !== -1;
       }).slice(0, 12);
       results = '<div class="stock-results">' + (found.length
@@ -416,8 +469,7 @@
 
     api('/product-mixes/' + ed.menuItem._id, { method: 'PUT', body: { items: items, status: status, notes: ed.notes || '' } })
       .then(function (r) {
-        return api('/product-mixes').then(function (mixes) {
-          S.mixes = mixes;
+        return loadMixList().then(function () {
           if (r.cleared) {
             toast('Mix cleared');
             S.editor = null;
@@ -434,91 +486,97 @@
 
   /* ----- stock / menu lists ----- */
 
-  function filterItems(kind) {
-    var items = kind === 'stock' ? S.stock : S.menu;
-    var q = S.search[kind].toLowerCase();
-    return items.filter(function (i) {
-      return !q || i.name.toLowerCase().indexOf(q) !== -1 || (i.category || '').toLowerCase().indexOf(q) !== -1;
-    });
+  function itemCardHtml(kind, i) {
+    var bits = [i.category];
+    if (kind === 'stock') bits.push('Buy: ' + (i.purchaseUnit || '—'), 'Use: ' + (i.consumptionUnit || '—'));
+    else bits.push(i.consumptionUnit ? 'Unit: ' + i.consumptionUnit : null);
+    var sub = esc(bits.filter(Boolean).join(' • '));
+    return '<button class="item-card" data-action="edit-item" data-kind="' + kind + '" data-id="' + i._id + '">' +
+      '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div>' +
+      '<span class="ic-chev">' + ICON.chevronRight + '</span></button>';
   }
 
   function renderItemList(kind) {
-    var items = kind === 'stock' ? S.stock : S.menu;
-    var list = filterItems(kind);
-    var selecting = S.select.active && S.select.kind === kind;
-
-    var cards = list.map(function (i) {
-      var bits = [i.category];
-      if (kind === 'stock') bits.push('Buy: ' + (i.purchaseUnit || '—'), 'Use: ' + (i.consumptionUnit || '—'));
-      else bits.push(i.consumptionUnit ? 'Unit: ' + i.consumptionUnit : null);
-      var sub = esc(bits.filter(Boolean).join(' • '));
-      if (selecting) {
-        var on = !!S.select.ids[i._id];
-        return '<button class="item-card select-card' + (on ? ' selected' : '') + '" data-action="toggle-select" data-id="' + i._id + '">' +
-          '<span class="check' + (on ? ' on' : '') + '"></span>' +
-          '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div></button>';
-      }
-      return '<button class="item-card" data-action="edit-item" data-kind="' + kind + '" data-id="' + i._id + '">' +
-        '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div>' +
-        '<span class="ic-chev">' + ICON.chevronRight + '</span></button>';
-    }).join('');
-
+    if (S.select.active && S.select.kind === kind) return renderSelectMode(kind);
     var label = kind === 'stock' ? 'stock' : 'menu';
-    var empty = items.length === 0
-      ? emptyState(kind === 'stock' ? 'box' : 'book', 'No ' + label + ' items yet', 'Tap + to add one, or use Bulk Upload to import many.')
-      : (list.length === 0 ? emptyState('search', 'Nothing matches', 'Try a different search.') : '');
-
-    var searchbar = searchbarHtml(kind + '-search', 'Search ' + label + ' items…', S.search[kind]);
-
-    if (selecting) {
-      var n = Object.keys(S.select.ids).length;
-      var allOn = list.length > 0 && list.every(function (i) { return S.select.ids[i._id]; });
-      var fieldBtns = kind === 'stock'
-        ? '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="category">' + ICON.tag + ' Category</button>' +
-          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="purchaseUnit">Buy unit</button>' +
-          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="consumptionUnit">Use unit</button>'
-        : '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="category">' + ICON.tag + ' Category</button>' +
-          '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="consumptionUnit">Unit</button>';
-
-      $('#view').innerHTML =
-        searchbar +
-        '<div class="select-toolbar">' +
-          '<button class="link-btn" data-action="select-cancel">Cancel</button>' +
-          '<span id="select-count">' + n + ' selected</span>' +
-          '<button class="link-btn" data-action="select-all" data-kind="' + kind + '">' + (allOn ? 'Clear all' : 'Select all') + '</button>' +
-        '</div>' +
-        cards + empty +
-        '<div style="height:80px"></div>' +
-        '<div class="select-actions">' + fieldBtns +
-          '<button class="btn btn-danger btn-sm" data-action="bulk-del" data-kind="' + kind + '">' + ICON.trash + ' Delete</button>' +
-        '</div>';
-      bindSearch(kind + '-search', kind);
-      return;
-    }
-
     $('#view').innerHTML =
-      searchbar +
+      searchbarHtml(kind + '-search', 'Search ' + label + ' items…', S.search[kind]) +
       '<div class="list-actions">' +
         '<button class="btn btn-outline btn-sm" data-action="bulk-open" data-kind="' + kind + '">' + ICON.upload + ' Bulk Upload</button>' +
         '<button class="btn btn-outline btn-sm" data-action="bulk-export" data-kind="' + kind + '">' + ICON.download + ' Export</button>' +
         '<button class="btn btn-outline btn-sm" data-action="cats-open" data-kind="' + kind + '">' + ICON.tag + ' Categories</button>' +
         '<button class="btn btn-outline btn-sm" data-action="select-start" data-kind="' + kind + '">' + ICON.select + ' Select</button>' +
       '</div>' +
-      cards + empty +
+      '<div id="list-main"></div>' +
       '<button class="fab" data-action="add-item" data-kind="' + kind + '" aria-label="Add">' + ICON.plus + '</button>';
-
     bindSearch(kind + '-search', kind);
+    renderItemMain(kind);
   }
 
+  function renderItemMain(kind) {
+    var items = kind === 'stock' ? S.stock : S.menu;
+    var label = kind === 'stock' ? 'stock' : 'menu';
+    var cards = items.map(function (i) { return itemCardHtml(kind, i); }).join('');
+    var empty = '';
+    if (!items.length) {
+      empty = filtersActive(kind)
+        ? emptyState('search', 'Nothing matches', 'Try a different search or category.')
+        : emptyState(kind === 'stock' ? 'box' : 'book', 'No ' + label + ' items yet', 'Tap + to add one, or use Bulk Upload to import many.');
+    }
+    $('#list-main').innerHTML = catChipsHtml(kind) + cards + empty;
+  }
+
+  function renderSelectMode(kind) {
+    var label = kind === 'stock' ? 'stock' : 'menu';
+    var fieldBtns = kind === 'stock'
+      ? '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="category">' + ICON.tag + ' Category</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="purchaseUnit">Buy unit</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="stock" data-field="consumptionUnit">Use unit</button>'
+      : '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="category">' + ICON.tag + ' Category</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="bulk-field" data-kind="menu" data-field="consumptionUnit">Unit</button>';
+    $('#view').innerHTML =
+      searchbarHtml(kind + '-search', 'Search ' + label + ' items…', S.search[kind]) +
+      '<div id="list-main"></div>' +
+      '<div style="height:80px"></div>' +
+      '<div class="select-actions">' + fieldBtns +
+        '<button class="btn btn-danger btn-sm" data-action="bulk-del" data-kind="' + kind + '">' + ICON.trash + ' Delete</button>' +
+      '</div>';
+    bindSearch(kind + '-search', kind);
+    renderSelectMain(kind);
+  }
+
+  function renderSelectMain(kind) {
+    var items = kind === 'stock' ? S.stock : S.menu;
+    var n = Object.keys(S.select.ids).length;
+    var allOn = items.length > 0 && items.every(function (i) { return S.select.ids[i._id]; });
+    var cards = items.map(function (i) {
+      var bits = [i.category];
+      if (kind === 'stock') bits.push('Buy: ' + (i.purchaseUnit || '—'), 'Use: ' + (i.consumptionUnit || '—'));
+      else bits.push(i.consumptionUnit ? 'Unit: ' + i.consumptionUnit : null);
+      var sub = esc(bits.filter(Boolean).join(' • '));
+      var on = !!S.select.ids[i._id];
+      return '<button class="item-card select-card' + (on ? ' selected' : '') + '" data-action="toggle-select" data-id="' + i._id + '">' +
+        '<span class="check' + (on ? ' on' : '') + '"></span>' +
+        '<div class="ic-main"><div class="ic-name">' + esc(i.name) + '</div><div class="ic-sub">' + sub + '</div></div></button>';
+    }).join('');
+    var empty = items.length === 0 ? emptyState('search', 'Nothing matches', 'Try a different search or category.') : '';
+    $('#list-main').innerHTML =
+      '<div class="select-toolbar">' +
+        '<button class="link-btn" data-action="select-cancel">Cancel</button>' +
+        '<span id="select-count">' + n + ' selected</span>' +
+        '<button class="link-btn" data-action="select-all" data-kind="' + kind + '">' + (allOn ? 'Clear all' : 'Select all') + '</button>' +
+      '</div>' +
+      catChipsHtml(kind) +
+      cards + empty;
+  }
+
+  var searchTimer;
   function bindSearch(id, keyName) {
     var el = document.getElementById(id);
     el.addEventListener('input', function () {
       S.search[keyName] = el.value;
-      var pos = el.selectionStart;
-      render();
-      var nel = document.getElementById(id);
-      nel.focus();
-      try { nel.setSelectionRange(pos, pos); } catch (e) {}
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () { reloadList(); }, 250);
     });
   }
 
@@ -605,7 +663,7 @@
     var req = id ? api(base + '/' + id, { method: 'PUT', body: body }) : api(base, { method: 'POST', body: body });
     req.then(function () {
       closeSheet();
-      return loadAll().then(function () { render(); toast('Saved'); });
+      return refreshAll().then(function () { render(); toast('Saved'); });
     }).catch(function (err) { toast(err.message, true); });
   }
 
@@ -619,7 +677,7 @@
       api((kind === 'stock' ? '/stock-items/' : '/menu-items/') + id, { method: 'DELETE' })
         .then(function () {
           closeSheet();
-          return loadAll().then(function () { render(); toast('Deleted'); });
+          return refreshAll().then(function () { render(); toast('Deleted'); });
         })
         .catch(function (err) { toast(err.message, true); });
     });
@@ -627,21 +685,11 @@
 
   /* ---------- categories ---------- */
 
-  function categoryCount(kind, name) {
-    var items = kind === 'stock' ? S.stock : S.menu;
-    var key = name.toLowerCase();
-    var n = 0;
-    for (var i = 0; i < items.length; i++) {
-      if ((items[i].category || '').toLowerCase() === key) n++;
-    }
-    return n;
-  }
-
   function openCatSheet(kind) {
     var cats = S.cats[kind];
     var rows = cats.length
       ? cats.map(function (c) {
-          var n = categoryCount(kind, c.name);
+          var n = c.count || 0;
           var archived = !!c.archived;
           var name = esc(c.name);
           var acts = '<button class="cat-act" data-action="cat-edit" data-kind="' + kind + '" data-id="' + c._id + '" data-name="' + name + '" aria-label="Rename">' + ICON.pencil + '</button>';
@@ -670,7 +718,7 @@
 
   // reload data, refresh the list underneath, and re-render the open categories sheet
   function refreshCats(kind) {
-    return loadAll().then(function () { render(); openCatSheet(kind); });
+    return refreshAll().then(function () { render(); openCatSheet(kind); });
   }
 
   function addCategory(kind) {
@@ -687,6 +735,7 @@
       if (!name || name === current) return;
       api('/categories/' + id, { method: 'PUT', body: { name: name } })
         .then(function (r) {
+          if (S.catFilter[kind] === current) S.catFilter[kind] = name; // keep the active filter pointing at the renamed category
           return refreshCats(kind).then(function () {
             toast('Renamed' + (r.updated ? ' · ' + r.updated + ' item' + (r.updated === 1 ? '' : 's') + ' updated' : ''));
           });
@@ -718,7 +767,10 @@
       danger: true, confirm: 'Delete',
     }, function () {
       api('/categories/' + id, { method: 'DELETE' })
-        .then(function () { return refreshCats(kind); })
+        .then(function () {
+          if (S.catFilter[kind] === name) S.catFilter[kind] = '';
+          return refreshCats(kind);
+        })
         .then(function () { toast('Deleted'); })
         .catch(function (err) { toast(err.message, true); });
     });
@@ -760,7 +812,7 @@
       .then(function (r) {
         closeSheet();
         exitSelect();
-        return loadAll().then(function () {
+        return refreshAll().then(function () {
           render();
           toast('Updated ' + r.updated + ' item' + (r.updated === 1 ? '' : 's'));
         });
@@ -783,7 +835,7 @@
       api(base + '/bulk-delete', { method: 'POST', body: { ids: ids } })
         .then(function (r) {
           exitSelect();
-          return loadAll().then(function () {
+          return refreshAll().then(function () {
             render();
             toast('Deleted ' + r.deleted + (r.skipped ? ', ' + r.skipped + ' skipped (in use)' : ''));
           });
@@ -792,24 +844,27 @@
     });
   }
 
+  // Export the FULL catalog (unfiltered), regardless of the current on-screen filter
   function exportItems(kind) {
-    var items = kind === 'stock' ? S.stock : S.menu;
-    if (!items.length) return toast('Nothing to export yet', true);
-    var headers = kind === 'stock'
-      ? ['id', 'Name', 'Category', 'Purchase Unit', 'Consumption Unit', 'Notes']
-      : ['id', 'Name', 'Category', 'Consumption Unit', 'Notes'];
-    var aoa = [headers];
-    items.forEach(function (i) {
-      aoa.push(kind === 'stock'
-        ? [i._id, i.name, i.category || '', i.purchaseUnit || '', i.consumptionUnit || '', i.notes || '']
-        : [i._id, i.name, i.category || '', i.consumptionUnit || '', i.notes || '']);
-    });
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = headers.map(function (h) { return { wch: h === 'id' ? 26 : 18 }; });
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, kind === 'stock' ? 'Stock Items' : 'Menu Items');
-    XLSX.writeFile(wb, 'munventory-' + kind + '-items.xlsx');
-    toast('Exported ' + items.length + ' item' + (items.length === 1 ? '' : 's'));
+    var base = kind === 'stock' ? '/stock-items' : '/menu-items';
+    api(base).then(function (items) {
+      if (!items.length) return toast('Nothing to export yet', true);
+      var headers = kind === 'stock'
+        ? ['id', 'Name', 'Category', 'Purchase Unit', 'Consumption Unit', 'Notes']
+        : ['id', 'Name', 'Category', 'Consumption Unit', 'Notes'];
+      var aoa = [headers];
+      items.forEach(function (i) {
+        aoa.push(kind === 'stock'
+          ? [i._id, i.name, i.category || '', i.purchaseUnit || '', i.consumptionUnit || '', i.notes || '']
+          : [i._id, i.name, i.category || '', i.consumptionUnit || '', i.notes || '']);
+      });
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = headers.map(function (h) { return { wch: h === 'id' ? 26 : 18 }; });
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, kind === 'stock' ? 'Stock Items' : 'Menu Items');
+      XLSX.writeFile(wb, 'munventory-' + kind + '-items.xlsx');
+      toast('Exported ' + items.length + ' item' + (items.length === 1 ? '' : 's'));
+    }).catch(function (err) { toast(err.message, true); });
   }
 
   /* ---------- bulk upload ---------- */
@@ -908,7 +963,7 @@
     api(base + '/bulk', { method: 'POST', body: { items: bulkState.rows } })
       .then(function (r) {
         closeSheet();
-        return loadAll().then(function () {
+        return refreshAll().then(function () {
           render();
           toast('Imported: ' + r.inserted + ' new, ' + r.updated + ' updated' + (r.skipped ? ', ' + r.skipped + ' skipped' : ''));
         });
@@ -1070,7 +1125,11 @@
     var id = el.getAttribute('data-id');
 
     switch (action) {
-      case 'mix-filter': S.mixFilter = el.getAttribute('data-val'); render(); break;
+      case 'mix-filter': S.mixFilter = el.getAttribute('data-val'); reloadList(); break;
+      case 'cat-filter':
+        S.catFilter[kind] = el.getAttribute('data-val');
+        reloadList();
+        break;
       case 'open-mix': openMix(id); break;
       case 'mix-back':
         if (S.editor && S.editor.dirty) {
@@ -1120,18 +1179,18 @@
         // keep the Select all / Clear all label in sync with live selection
         var allBtn = document.querySelector('[data-action="select-all"]');
         if (allBtn) {
-          var vis0 = filterItems(S.select.kind);
+          var vis0 = S.select.kind === 'stock' ? S.stock : S.menu;
           var allOn0 = vis0.length > 0 && vis0.every(function (i) { return S.select.ids[i._id]; });
           allBtn.textContent = allOn0 ? 'Clear all' : 'Select all';
         }
         break;
       }
       case 'select-all': {
-        var vis = filterItems(kind);
+        var vis = kind === 'stock' ? S.stock : S.menu;
         var everyOn = vis.length > 0 && vis.every(function (i) { return S.select.ids[i._id]; });
         S.select.ids = {};
         if (!everyOn) vis.forEach(function (i) { S.select.ids[i._id] = true; });
-        render(); break;
+        renderSelectMain(kind); break;
       }
       case 'bulk-field': openBulkFieldSheet(kind, el.getAttribute('data-field')); break;
       case 'bulk-field-apply': applyBulkField(kind, el.getAttribute('data-field')); break;
@@ -1167,13 +1226,26 @@
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () {
       var tab = t.getAttribute('data-tab');
-      function go() { S.editor = null; exitSelect(); S.tab = tab; render(); window.scrollTo(0, 0); }
+      function go() {
+        S.editor = null; exitSelect(); S.tab = tab;
+        document.querySelectorAll('.tab').forEach(function (t2) { t2.classList.toggle('active', t2.getAttribute('data-tab') === S.tab); });
+        window.scrollTo(0, 0);
+        loadCurrent().then(render).catch(function (err) { toast(err.message, true); render(); });
+      }
       if (S.editor && S.editor.dirty) {
         confirmDialog({ title: 'Discard changes?', body: 'Your unsaved edits to this mix will be lost.', confirm: 'Discard' }, go);
       } else { go(); }
     });
   });
 
+  $('#refresh-btn').addEventListener('click', function () {
+    var btn = $('#refresh-btn');
+    if (btn.classList.contains('spinning')) return;
+    btn.classList.add('spinning');
+    refreshAll().then(function () { render(); toast('Refreshed'); })
+      .catch(function (err) { toast(err.message, true); })
+      .then(function () { btn.classList.remove('spinning'); });
+  });
   $('#report-btn').addEventListener('click', openReportSheet);
   $('#logout-btn').addEventListener('click', function () {
     api('/logout', { method: 'POST' }).catch(function () {}).then(showLogin);

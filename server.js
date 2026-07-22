@@ -147,10 +147,39 @@ app.post('/api/logout', (req, res) => {
 
 /* ---------- categories ---------- */
 
+function escapeRx(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function catRegex(name) { return new RegExp('^' + escapeRx(name) + '$', 'i'); }
+function searchRegex(s) { return new RegExp(escapeRx(s), 'i'); }
+function catCollection(type) { return type === 'menu' ? 'menuItems' : 'stockItems'; }
+
+// Build a Mongo filter from ?category= (exact, case-insensitive) and ?q= (name/category substring)
+function listQuery(req) {
+  const filter = {};
+  const cat = str(req.query.category, 60);
+  const search = str(req.query.q, 120);
+  if (cat) filter.category = catRegex(cat);
+  if (search) filter.$or = [{ name: searchRegex(search) }, { category: searchRegex(search) }];
+  return filter;
+}
+
+// number of items of a type per (lower-cased) category name
+async function categoryCounts(type) {
+  const rows = await db.collection(catCollection(type)).aggregate([
+    { $match: { category: { $nin: [null, ''] } } },
+    { $group: { _id: { $toLower: '$category' }, n: { $sum: 1 } } },
+  ]).toArray();
+  const map = new Map();
+  rows.forEach((r) => { if (typeof r._id === 'string') map.set(r._id, r.n); });
+  return map;
+}
+
 app.get('/api/categories', wrap(async (req, res) => {
   const type = req.query.type === 'menu' ? 'menu' : 'stock';
-  const cats = await db.collection('categories').find({ type }).sort({ name: 1 }).toArray();
-  res.json(cats);
+  const [cats, counts] = await Promise.all([
+    db.collection('categories').find({ type }).sort({ name: 1 }).toArray(),
+    categoryCounts(type),
+  ]);
+  res.json(cats.map((c) => ({ ...c, count: counts.get(c.nameKey) || 0 })));
 }));
 
 app.post('/api/categories', wrap(async (req, res) => {
@@ -161,13 +190,6 @@ app.post('/api/categories', wrap(async (req, res) => {
   const cat = await db.collection('categories').findOne({ nameKey: key(name), type });
   res.json(cat);
 }));
-
-function catRegex(name) {
-  return new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
-}
-function catCollection(type) {
-  return type === 'menu' ? 'menuItems' : 'stockItems';
-}
 function categoryUsage(type, name) {
   return db.collection(catCollection(type)).countDocuments({ category: catRegex(name) });
 }
@@ -222,7 +244,7 @@ function stockDoc(body) {
 }
 
 app.get('/api/stock-items', wrap(async (req, res) => {
-  const items = await db.collection('stockItems').find({}).sort({ name: 1 }).collation({ locale: 'en' }).toArray();
+  const items = await db.collection('stockItems').find(listQuery(req)).sort({ name: 1 }).collation({ locale: 'en' }).toArray();
   res.json(items);
 }));
 
@@ -369,7 +391,7 @@ function menuDoc(body) {
 }
 
 app.get('/api/menu-items', wrap(async (req, res) => {
-  const items = await db.collection('menuItems').find({}).sort({ name: 1 }).collation({ locale: 'en' }).toArray();
+  const items = await db.collection('menuItems').find(listQuery(req)).sort({ name: 1 }).collation({ locale: 'en' }).toArray();
   res.json(items);
 }));
 
@@ -432,7 +454,36 @@ app.post('/api/menu-items/bulk-delete', wrap(async (req, res) => {
 
 /* ---------- product mixes ---------- */
 
-// All mixes (light) - used for status badges on the menu list
+// Product Mix list: menu items joined with their mix status, filtered server-side
+// by ?category=, ?q= and ?status=. Also returns status counts (before the status
+// filter) so the chips stay accurate within the current category/search.
+app.get('/api/mix-list', wrap(async (req, res) => {
+  const menuFilter = listQuery(req);
+  const status = req.query.status;
+  const [menu, mixes] = await Promise.all([
+    db.collection('menuItems').find(menuFilter).sort({ name: 1 }).collation({ locale: 'en' }).toArray(),
+    db.collection('productMixes').find({}, { projection: { menuItemId: 1, status: 1, items: 1 } }).toArray(),
+  ]);
+  const mixMap = new Map(mixes.map((m) => [String(m.menuItemId), m]));
+  let items = menu.map((m) => {
+    const mix = mixMap.get(String(m._id));
+    return {
+      _id: m._id,
+      name: m.name,
+      category: m.category || '',
+      status: mix ? mix.status : 'not_done',
+      itemCount: mix ? (mix.items || []).length : 0,
+    };
+  });
+  const counts = { all: items.length, not_done: 0, draft: 0, confirmed: 0 };
+  items.forEach((i) => { counts[i.status] = (counts[i.status] || 0) + 1; });
+  if (status === 'not_done' || status === 'draft' || status === 'confirmed') {
+    items = items.filter((i) => i.status === status);
+  }
+  res.json({ items, counts });
+}));
+
+// All mixes (light) - kept for compatibility
 app.get('/api/product-mixes', wrap(async (req, res) => {
   const mixes = await db.collection('productMixes')
     .find({}, { projection: { menuItemId: 1, status: 1, items: 1 } }).toArray();
