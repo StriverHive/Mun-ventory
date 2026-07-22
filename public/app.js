@@ -250,9 +250,22 @@
     if (S.tab === 'stock') return loadStock();
     return loadMenu();
   }
+  // Drop a category filter whose category no longer has any items, so the view
+  // never gets stranded on an empty, un-clearable filtered list after a delete,
+  // recategorize, bulk move or rename. The mix tab mirrors the menu categories.
+  function reconcileCatFilters() {
+    ['stock', 'menu', 'mix'].forEach(function (k) {
+      var cf = S.catFilter[k];
+      if (!cf) return;
+      var catKey = k === 'mix' ? 'menu' : k;
+      var ok = S.cats[catKey].some(function (c) { return c.count > 0 && c.name === cf; });
+      if (!ok) S.catFilter[k] = '';
+    });
+  }
+
   // categories + the current tab's list
   function refreshAll() {
-    return loadCats().then(loadCurrent);
+    return loadCats().then(function () { reconcileCatFilters(); return loadCurrent(); });
   }
 
   // reload the current list from the server, then update only the list body
@@ -736,6 +749,7 @@
       api('/categories/' + id, { method: 'PUT', body: { name: name } })
         .then(function (r) {
           if (S.catFilter[kind] === current) S.catFilter[kind] = name; // keep the active filter pointing at the renamed category
+          if (kind === 'menu' && S.catFilter.mix === current) S.catFilter.mix = name; // mix page mirrors menu categories
           return refreshCats(kind).then(function () {
             toast('Renamed' + (r.updated ? ' · ' + r.updated + ' item' + (r.updated === 1 ? '' : 's') + ' updated' : ''));
           });
@@ -1163,10 +1177,12 @@
       case 'cat-archive': archiveCategory(kind, id, el.getAttribute('data-name'), true); break;
       case 'cat-restore': archiveCategory(kind, id, null, false); break;
       case 'cat-del': deleteCategory(kind, id, el.getAttribute('data-name')); break;
-      case 'select-start':
-        if ((kind === 'stock' ? S.stock : S.menu).length === 0) { toast('Add some items first', true); break; }
+      case 'select-start': {
+        var selList = kind === 'stock' ? S.stock : S.menu;
+        if (selList.length === 0) { toast(filtersActive(kind) ? 'No items match the current filter' : 'Add some items first', true); break; }
         S.select = { active: true, kind: kind, ids: {} };
         render(); window.scrollTo(0, 0); break;
+      }
       case 'select-cancel': exitSelect(); render(); break;
       case 'toggle-select': {
         var nowOn = !S.select.ids[id];

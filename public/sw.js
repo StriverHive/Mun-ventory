@@ -1,5 +1,5 @@
 /* Mun-ventory service worker */
-var CACHE = 'munventory-v11';
+var CACHE = 'munventory-v12';
 var ASSETS = [
   '/',
   '/styles.css',

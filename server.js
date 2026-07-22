@@ -162,14 +162,19 @@ function listQuery(req) {
   return filter;
 }
 
-// number of items of a type per (lower-cased) category name
+// number of items of a type per category name, folded the SAME way nameKey is
+// (JS trim().toLowerCase() — full Unicode; Mongo's $toLower is ASCII-only)
 async function categoryCounts(type) {
   const rows = await db.collection(catCollection(type)).aggregate([
     { $match: { category: { $nin: [null, ''] } } },
-    { $group: { _id: { $toLower: '$category' }, n: { $sum: 1 } } },
+    { $group: { _id: '$category', n: { $sum: 1 } } },
   ]).toArray();
   const map = new Map();
-  rows.forEach((r) => { if (typeof r._id === 'string') map.set(r._id, r.n); });
+  rows.forEach((r) => {
+    if (typeof r._id !== 'string') return;
+    const k = r._id.trim().toLowerCase();
+    map.set(k, (map.get(k) || 0) + r.n);
+  });
   return map;
 }
 
