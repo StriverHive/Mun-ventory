@@ -1070,7 +1070,7 @@
     $('#card-stage').innerHTML =
       '<div class="recipe-card" id="recipe-card">' +
         '<div class="rc-head">' +
-          '<div class="rc-brand"><img src="/icons/icon-192.png" alt=""><span>Mun-ventory</span></div>' +
+          '<div class="rc-brand"><img src="/icons/full-logo.png" alt="Munchies Inventory"></div>' +
           '<h2>' + esc(ed.menuItem.name) + '</h2>' +
           '<div class="rc-pills">' + pills + '</div>' +
         '</div>' +
